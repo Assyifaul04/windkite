@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/update-weather",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/clean-sessions",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/generate-reports",
+      "schedule": "0 1 * * *"
+    }
+  ]
+}
