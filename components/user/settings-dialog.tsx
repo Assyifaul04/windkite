@@ -181,15 +181,13 @@ export function SettingsDialog({ children, trigger }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <div>
-          {trigger || (
-            <Button variant="default" size="lg" className="gap-3 text-lg px-8 py-6">
-              <Gear className="h-6 w-6" />
-              Buka Dashboard
-            </Button>
-          )}
-        </div>
+      <DialogTrigger>
+        {trigger || (
+          <Button variant="default" size="lg" className="gap-3 text-lg px-8 py-6">
+            <Gear className="h-6 w-6" />
+            Buka Dashboard
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="overflow-hidden p-0 md:max-h-[90vh] md:max-w-[95vw] lg:max-h-[600px] lg:max-w-[1000px] w-full h-full md:h-auto">
         <DialogTitle className="sr-only">Dashboard Menu</DialogTitle>
@@ -208,9 +206,9 @@ export function SettingsDialog({ children, trigger }: SettingsDialogProps) {
           <main className="flex flex-1 flex-col h-full overflow-hidden w-full">
             {/* Header */}
             <header className="flex h-14 md:h-16 shrink-0 items-center gap-2 px-3 md:px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              {/* Mobile Menu Button */}
+              {/* Mobile Menu Button - Fixed: Removed asChild */}
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
+                <SheetTrigger>
                   <Button variant="ghost" size="sm" className="md:hidden -ml-2 h-8 w-8 p-0">
                     <List className="h-5 w-5" />
                   </Button>

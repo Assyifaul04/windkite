@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma'; // was missing -> ReferenceError on masked-key path
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,9 +16,9 @@ export async function POST(req: NextRequest) {
     // Validasi API Key - cek apakah masih masked
     if (!apiKey || apiKey.length < 5) {
       return NextResponse.json(
-        { 
+        {
           success: false,
-          error: 'API Key tidak valid. Pastikan API Key Anda benar.' 
+          error: 'API Key tidak valid. Pastikan API Key Anda benar.'
         },
         { status: 400 }
       );
@@ -26,15 +27,14 @@ export async function POST(req: NextRequest) {
     // Jika API Key masih masked (••••••••), ambil dari database
     let finalApiKey = apiKey;
     if (apiKey === '••••••••' || apiKey.includes('•')) {
-      // Ambil dari database
-      const settings = await prisma?.weatherSettings?.findFirst();
+      const settings = await prisma.weatherSettings.findFirst();
       if (settings?.apiKey) {
         finalApiKey = settings.apiKey;
       } else {
         return NextResponse.json(
-          { 
+          {
             success: false,
-            error: 'API Key tidak ditemukan di database. Silakan simpan terlebih dahulu.' 
+            error: 'API Key tidak ditemukan di database. Silakan simpan terlebih dahulu.'
           },
           { status: 400 }
         );
@@ -62,9 +62,9 @@ export async function POST(req: NextRequest) {
         break;
       default:
         return NextResponse.json(
-          { 
+          {
             success: false,
-            error: 'Provider tidak didukung' 
+            error: 'Provider tidak didukung'
           },
           { status: 400 }
         );
@@ -90,15 +90,15 @@ export async function POST(req: NextRequest) {
           weatherInfo = `☁️ ${data.data[0].weather?.description || 'N/A'}`;
         }
 
-        return NextResponse.json({ 
-          success: true, 
+        return NextResponse.json({
+          success: true,
           message: `✅ Koneksi ${provider} berhasil!`,
           data: data,
           weatherInfo: weatherInfo
         });
       } else {
         let errorMessage = 'Koneksi gagal';
-        
+
         if (data.message) {
           errorMessage = data.message;
         } else if (data.error) {
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json(
-          { 
+          {
             success: false,
             error: `❌ Gagal terhubung ke ${provider}: ${errorMessage}`,
             status: response.status,
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     } catch (fetchError) {
       console.error('Fetch error:', fetchError);
       return NextResponse.json(
-        { 
+        {
           success: false,
           error: 'Gagal menguji koneksi: ' + (fetchError as Error).message,
           status: 500
@@ -134,9 +134,9 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error testing weather API:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: 'Gagal menguji koneksi: ' + (error as Error).message 
+        error: 'Gagal menguji koneksi: ' + (error as Error).message
       },
       { status: 500 }
     );

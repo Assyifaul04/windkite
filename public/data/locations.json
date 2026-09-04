@@ -1,0 +1,1469 @@
+{
+  "locations": [
+    {
+      "name": "Kecamatan Ajung",
+      "lat": -8.1886,
+      "lng": 113.6881,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Ajung",
+      "villages": [
+        {
+          "name": "Ajung",
+          "lat": -8.1892,
+          "lng": 113.6885
+        },
+        {
+          "name": "Klompangan",
+          "lat": -8.1956,
+          "lng": 113.6823
+        },
+        {
+          "name": "Mangaran",
+          "lat": -8.1834,
+          "lng": 113.6947
+        },
+        {
+          "name": "Pancakarya",
+          "lat": -8.1928,
+          "lng": 113.6762
+        },
+        {
+          "name": "Rowoindah",
+          "lat": -8.1769,
+          "lng": 113.6918
+        },
+        {
+          "name": "Sukamakmur",
+          "lat": -8.2015,
+          "lng": 113.6856
+        },
+        {
+          "name": "Wirowongso",
+          "lat": -8.1803,
+          "lng": 113.6789
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Ambulu",
+      "lat": -8.35,
+      "lng": 113.6167,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Ambulu",
+      "villages": [
+        {
+          "name": "Ambulu",
+          "lat": -8.346286,
+          "lng": 113.603393
+        },
+        {
+          "name": "Andongsari",
+          "lat": -8.3428,
+          "lng": 113.6215
+        },
+        {
+          "name": "Karanganyar",
+          "lat": -8.321949,
+          "lng": 113.613242
+        },
+        {
+          "name": "Pontang",
+          "lat": -8.347436,
+          "lng": 113.636919
+        },
+        {
+          "name": "Sumberejo",
+          "lat": -8.3556,
+          "lng": 113.6039
+        },
+        {
+          "name": "Tegalsari",
+          "lat": -8.3625,
+          "lng": 113.6194
+        },
+        {
+          "name": "Wuluhan",
+          "lat": -8.3389,
+          "lng": 113.6300
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Arjasa",
+      "lat": -8.1228,
+      "lng": 113.7367,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Arjasa",
+      "villages": [
+        {
+          "name": "Arjasa",
+          "lat": -8.1228,
+          "lng": 113.7367
+        },
+        {
+          "name": "Biting",
+          "lat": -8.1156,
+          "lng": 113.7422
+        },
+        {
+          "name": "Candijati",
+          "lat": -8.1289,
+          "lng": 113.7300
+        },
+        {
+          "name": "Dukuhmencek",
+          "lat": -8.1300,
+          "lng": 113.7456
+        },
+        {
+          "name": "Kalianyar",
+          "lat": -8.1183,
+          "lng": 113.7289
+        },
+        {
+          "name": "Kamal",
+          "lat": -8.1100,
+          "lng": 113.7511
+        },
+        {
+          "name": "Kertosari",
+          "lat": -8.1356,
+          "lng": 113.7322
+        },
+        {
+          "name": "Patemon",
+          "lat": -8.1250,
+          "lng": 113.7517
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Balung",
+      "lat": -8.2731,
+      "lng": 113.5017,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Balung",
+      "villages": [
+        {
+          "name": "Balung Kidul",
+          "lat": -8.2789,
+          "lng": 113.5017
+        },
+        {
+          "name": "Balung Kulon",
+          "lat": -8.2731,
+          "lng": 113.4967
+        },
+        {
+          "name": "Balung Lor",
+          "lat": -8.2672,
+          "lng": 113.5017
+        },
+        {
+          "name": "Curahlele",
+          "lat": -8.2800,
+          "lng": 113.5089
+        },
+        {
+          "name": "Gumelar",
+          "lat": -8.2689,
+          "lng": 113.4950
+        },
+        {
+          "name": "Karangduren",
+          "lat": -8.2822,
+          "lng": 113.4939
+        },
+        {
+          "name": "Karang Semanding",
+          "lat": -8.2756,
+          "lng": 113.5100
+        },
+        {
+          "name": "Tutul",
+          "lat": -8.2700,
+          "lng": 113.4889
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Bangsalsari",
+      "lat": -8.2028,
+      "lng": 113.5394,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Bangsalsari",
+      "villages": [
+        {
+          "name": "Badean",
+          "lat": -8.2083,
+          "lng": 113.5350
+        },
+        {
+          "name": "Bangsalsari",
+          "lat": -8.2028,
+          "lng": 113.5394
+        },
+        {
+          "name": "Banjar Sari",
+          "lat": -8.1989,
+          "lng": 113.5456
+        },
+        {
+          "name": "Curah Kalong",
+          "lat": -8.2100,
+          "lng": 113.5322
+        },
+        {
+          "name": "Gambirono",
+          "lat": -8.1956,
+          "lng": 113.5500
+        },
+        {
+          "name": "Karangsono",
+          "lat": -8.2125,
+          "lng": 113.5278
+        },
+        {
+          "name": "Langkap",
+          "lat": -8.1900,
+          "lng": 113.5433
+        },
+        {
+          "name": "Petung",
+          "lat": -8.2156,
+          "lng": 113.5489
+        },
+        {
+          "name": "Sukorejo",
+          "lat": -8.2000,
+          "lng": 113.5289
+        },
+        {
+          "name": "Tisnogambar",
+          "lat": -8.2075,
+          "lng": 113.5556
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Gumukmas",
+      "lat": -8.3128,
+      "lng": 113.4064,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Gumukmas",
+      "villages": [
+        {
+          "name": "Bagorejo",
+          "lat": -8.3183,
+          "lng": 113.4022
+        },
+        {
+          "name": "Gumukmas",
+          "lat": -8.3128,
+          "lng": 113.4064
+        },
+        {
+          "name": "Karangrejo",
+          "lat": -8.3067,
+          "lng": 113.4111
+        },
+        {
+          "name": "Kepanjen",
+          "lat": -8.3200,
+          "lng": 113.3989
+        },
+        {
+          "name": "Mayangan",
+          "lat": -8.3089,
+          "lng": 113.4150
+        },
+        {
+          "name": "Menampu",
+          "lat": -8.3250,
+          "lng": 113.4056
+        },
+        {
+          "name": "Purwoasri",
+          "lat": -8.3156,
+          "lng": 113.4200
+        },
+        {
+          "name": "Tembokrejo",
+          "lat": -8.3022,
+          "lng": 113.4089
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Jelbuk",
+      "lat": -8.0908,
+      "lng": 113.7539,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Jelbuk",
+      "villages": [
+        {
+          "name": "Jelbuk",
+          "lat": -8.0908,
+          "lng": 113.7539
+        },
+        {
+          "name": "Panduman",
+          "lat": -8.0850,
+          "lng": 113.7600
+        },
+        {
+          "name": "Sucopangepok",
+          "lat": -8.0967,
+          "lng": 113.7489
+        },
+        {
+          "name": "Sugerkidul",
+          "lat": -8.0889,
+          "lng": 113.7667
+        },
+        {
+          "name": "Sukojember",
+          "lat": -8.0822,
+          "lng": 113.7556
+        },
+        {
+          "name": "Sukowono",
+          "lat": -8.0989,
+          "lng": 113.7611
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Jenggawah",
+      "lat": -8.2756,
+      "lng": 113.6269,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Jenggawah",
+      "villages": [
+        {
+          "name": "Cangkring",
+          "lat": -8.2811,
+          "lng": 113.6222
+        },
+        {
+          "name": "Jatimulyo",
+          "lat": -8.2700,
+          "lng": 113.6311
+        },
+        {
+          "name": "Jatisari",
+          "lat": -8.2789,
+          "lng": 113.6189
+        },
+        {
+          "name": "Jenggawah",
+          "lat": -8.2756,
+          "lng": 113.6269
+        },
+        {
+          "name": "Kemuningsari Kidul",
+          "lat": -8.2833,
+          "lng": 113.6344
+        },
+        {
+          "name": "Kertonegoro",
+          "lat": -8.2689,
+          "lng": 113.6250
+        },
+        {
+          "name": "Sruni",
+          "lat": -8.2850,
+          "lng": 113.6200
+        },
+        {
+          "name": "Wonojati",
+          "lat": -8.2733,
+          "lng": 113.6400
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Jombang",
+      "lat": -8.1594,
+      "lng": 113.6939,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Jombang",
+      "villages": [
+        {
+          "name": "Jombang",
+          "lat": -8.1594,
+          "lng": 113.6939
+        },
+        {
+          "name": "Keting",
+          "lat": -8.1522,
+          "lng": 113.6978
+        },
+        {
+          "name": "Ngampelrejo",
+          "lat": -8.1650,
+          "lng": 113.6889
+        },
+        {
+          "name": "Padomasan",
+          "lat": -8.1556,
+          "lng": 113.7022
+        },
+        {
+          "name": "Sumberejo",
+          "lat": -8.1689,
+          "lng": 113.6856
+        },
+        {
+          "name": "Wringinagung",
+          "lat": -8.1489,
+          "lng": 113.6900
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Kalisat",
+      "lat": -8.0847,
+      "lng": 113.8258,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Kalisat",
+      "villages": [
+        {
+          "name": "Ajung",
+          "lat": -8.0789,
+          "lng": 113.8200
+        },
+        {
+          "name": "Gambiran",
+          "lat": -8.0889,
+          "lng": 113.8311
+        },
+        {
+          "name": "Glagahwero",
+          "lat": -8.0756,
+          "lng": 113.8289
+        },
+        {
+          "name": "Gunungsari",
+          "lat": -8.0933,
+          "lng": 113.8222
+        },
+        {
+          "name": "Kalisat",
+          "lat": -8.0847,
+          "lng": 113.8258
+        },
+        {
+          "name": "Kebonagung",
+          "lat": -8.0800,
+          "lng": 113.8350
+        },
+        {
+          "name": "Kebonsari",
+          "lat": -8.0989,
+          "lng": 113.8189
+        },
+        {
+          "name": "Patempuran",
+          "lat": -8.0711,
+          "lng": 113.8233
+        },
+        {
+          "name": "Plalangan",
+          "lat": -8.1056,
+          "lng": 113.8300
+        },
+        {
+          "name": "Sebanen",
+          "lat": -8.0900,
+          "lng": 113.8400
+        },
+        {
+          "name": "Sumberjeruk",
+          "lat": -8.0767,
+          "lng": 113.8156
+        },
+        {
+          "name": "Sumberkalong",
+          "lat": -8.1011,
+          "lng": 113.8267
+        },
+        {
+          "name": "Tanggul Wetan",
+          "lat": -8.0833,
+          "lng": 113.8389
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Kaliwates",
+      "lat": -8.1675,
+      "lng": 113.7178,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Kaliwates",
+      "villages": [
+        {
+          "name": "Kaliwates",
+          "lat": -8.1675,
+          "lng": 113.7178
+        },
+        {
+          "name": "Kebonagung",
+          "lat": -8.1611,
+          "lng": 113.7222
+        },
+        {
+          "name": "Kepatihan",
+          "lat": -8.1700,
+          "lng": 113.7111
+        },
+        {
+          "name": "Mangli",
+          "lat": -8.1756,
+          "lng": 113.7200
+        },
+        {
+          "name": "Sempusari",
+          "lat": -8.1639,
+          "lng": 113.7267
+        },
+        {
+          "name": "Tegal Besar",
+          "lat": -8.1589,
+          "lng": 113.7156
+        },
+        {
+          "name": "Tegal Gede",
+          "lat": -8.1722,
+          "lng": 113.7089
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Kencong",
+      "lat": -8.2844,
+      "lng": 113.3714,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Kencong",
+      "villages": [
+        {
+          "name": "Cakru",
+          "lat": -8.2789,
+          "lng": 113.3667
+        },
+        {
+          "name": "Kencong",
+          "lat": -8.2844,
+          "lng": 113.3714
+        },
+        {
+          "name": "Kraton",
+          "lat": -8.2900,
+          "lng": 113.3767
+        },
+        {
+          "name": "Paseban",
+          "lat": -8.2767,
+          "lng": 113.3800
+        },
+        {
+          "name": "Wonorejo",
+          "lat": -8.2956,
+          "lng": 113.3667
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Ledokombo",
+      "lat": -8.1283,
+      "lng": 113.8636,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Ledokombo",
+      "villages": [
+        {
+          "name": "Jatian",
+          "lat": -8.1350,
+          "lng": 113.8589
+        },
+        {
+          "name": "Ledokombo",
+          "lat": -8.1283,
+          "lng": 113.8636
+        },
+        {
+          "name": "Lembengan",
+          "lat": -8.1211,
+          "lng": 113.8689
+        },
+        {
+          "name": "Sukogidri",
+          "lat": -8.1400,
+          "lng": 113.8567
+        },
+        {
+          "name": "Sumberanget",
+          "lat": -8.1189,
+          "lng": 113.8700
+        },
+        {
+          "name": "Sumberbulus",
+          "lat": -8.1456,
+          "lng": 113.8611
+        },
+        {
+          "name": "Sumberlesung",
+          "lat": -8.1250,
+          "lng": 113.8767
+        },
+        {
+          "name": "Sumbersalak",
+          "lat": -8.1311,
+          "lng": 113.8511
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Mayang",
+      "lat": -8.2153,
+      "lng": 113.8256,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Mayang",
+      "villages": [
+        {
+          "name": "Jatian",
+          "lat": -8.2211,
+          "lng": 113.8200
+        },
+        {
+          "name": "Mayang",
+          "lat": -8.2153,
+          "lng": 113.8256
+        },
+        {
+          "name": "Mrawan",
+          "lat": -8.2089,
+          "lng": 113.8311
+        },
+        {
+          "name": "Sumberkejayan",
+          "lat": -8.2250,
+          "lng": 113.8233
+        },
+        {
+          "name": "Sumberpakem",
+          "lat": -8.2100,
+          "lng": 113.8350
+        },
+        {
+          "name": "Tegalrejo",
+          "lat": -8.2300,
+          "lng": 113.8189
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Mumbulsari",
+      "lat": -8.2611,
+      "lng": 113.6661,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Mumbulsari",
+      "villages": [
+        {
+          "name": "Karang Kedawung",
+          "lat": -8.2667,
+          "lng": 113.6611
+        },
+        {
+          "name": "Kawangrejo",
+          "lat": -8.2556,
+          "lng": 113.6700
+        },
+        {
+          "name": "Lampeji",
+          "lat": -8.2700,
+          "lng": 113.6589
+        },
+        {
+          "name": "Mumbulsari",
+          "lat": -8.2611,
+          "lng": 113.6661
+        },
+        {
+          "name": "Sukodono",
+          "lat": -8.2533,
+          "lng": 113.6750
+        },
+        {
+          "name": "Tamansari",
+          "lat": -8.2750,
+          "lng": 113.6689
+        },
+        {
+          "name": "Tanjungsari",
+          "lat": -8.2589,
+          "lng": 113.6556
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Pakusari",
+      "lat": -8.1378,
+      "lng": 113.7756,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Pakusari",
+      "villages": [
+        {
+          "name": "Bedadung",
+          "lat": -8.1311,
+          "lng": 113.7800
+        },
+        {
+          "name": "Jatian",
+          "lat": -8.1450,
+          "lng": 113.7711
+        },
+        {
+          "name": "Kertosari",
+          "lat": -8.1400,
+          "lng": 113.7867
+        },
+        {
+          "name": "Pakusari",
+          "lat": -8.1378,
+          "lng": 113.7756
+        },
+        {
+          "name": "Patemon",
+          "lat": -8.1289,
+          "lng": 113.7733
+        },
+        {
+          "name": "Subo",
+          "lat": -8.1489,
+          "lng": 113.7800
+        },
+        {
+          "name": "Sumberpinang",
+          "lat": -8.1250,
+          "lng": 113.7889
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Panti",
+      "lat": -8.0669,
+      "lng": 113.8339,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Panti",
+      "villages": [
+        {
+          "name": "Glagahwero",
+          "lat": -8.0611,
+          "lng": 113.8300
+        },
+        {
+          "name": "Kamal",
+          "lat": -8.0733,
+          "lng": 113.8400
+        },
+        {
+          "name": "Kemiri",
+          "lat": -8.0589,
+          "lng": 113.8389
+        },
+        {
+          "name": "Panti",
+          "lat": -8.0669,
+          "lng": 113.8339
+        },
+        {
+          "name": "Serut",
+          "lat": -8.0750,
+          "lng": 113.8267
+        },
+        {
+          "name": "Sukoharjo",
+          "lat": -8.0556,
+          "lng": 113.8450
+        },
+        {
+          "name": "Sumberpakem",
+          "lat": -8.0800,
+          "lng": 113.8350
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Patrang",
+      "lat": -8.1533,
+      "lng": 113.7094,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Patrang",
+      "villages": [
+        {
+          "name": "Banjarsengon",
+          "lat": -8.1478,
+          "lng": 113.7133
+        },
+        {
+          "name": "Gebang",
+          "lat": -8.1589,
+          "lng": 113.7033
+        },
+        {
+          "name": "Jember Kidul",
+          "lat": -8.1600,
+          "lng": 113.7156
+        },
+        {
+          "name": "Jember Lor",
+          "lat": -8.1489,
+          "lng": 113.7167
+        },
+        {
+          "name": "Karangrejo",
+          "lat": -8.1556,
+          "lng": 113.7000
+        },
+        {
+          "name": "Patrang",
+          "lat": -8.1533,
+          "lng": 113.7094
+        },
+        {
+          "name": "Slawu",
+          "lat": -8.1450,
+          "lng": 113.7056
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Puger",
+      "lat": -8.3842,
+      "lng": 113.4947,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Puger",
+      "villages": [
+        {
+          "name": "Bagon",
+          "lat": -8.3900,
+          "lng": 113.4900
+        },
+        {
+          "name": "Grenden",
+          "lat": -8.3789,
+          "lng": 113.4989
+        },
+        {
+          "name": "Jambearum",
+          "lat": -8.3956,
+          "lng": 113.4856
+        },
+        {
+          "name": "Kasiyan",
+          "lat": -8.3889,
+          "lng": 113.5033
+        },
+        {
+          "name": "Kasiyan Timur",
+          "lat": -8.3856,
+          "lng": 113.5100
+        },
+        {
+          "name": "Mlokorejo",
+          "lat": -8.3750,
+          "lng": 113.4956
+        },
+        {
+          "name": "Mojomulyo",
+          "lat": -8.4011,
+          "lng": 113.4889
+        },
+        {
+          "name": "Mojosari",
+          "lat": -8.3933,
+          "lng": 113.5150
+        },
+        {
+          "name": "Puger Kulon",
+          "lat": -8.3842,
+          "lng": 113.4947
+        },
+        {
+          "name": "Puger Wetan",
+          "lat": -8.3800,
+          "lng": 113.5056
+        },
+        {
+          "name": "Sukowono",
+          "lat": -8.3989,
+          "lng": 113.4950
+        },
+        {
+          "name": "Wonorejo",
+          "lat": -8.3711,
+          "lng": 113.5050
+        },
+        {
+          "name": "Wringin Telu",
+          "lat": -8.3778,
+          "lng": 113.4889
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Rambipuji",
+      "lat": -8.2269,
+      "lng": 113.6125,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Rambipuji",
+      "villages": [
+        {
+          "name": "Curahmalang",
+          "lat": -8.2322,
+          "lng": 113.6078
+        },
+        {
+          "name": "Gugut",
+          "lat": -8.2200,
+          "lng": 113.6167
+        },
+        {
+          "name": "Kaliwining",
+          "lat": -8.2356,
+          "lng": 113.6200
+        },
+        {
+          "name": "Kebonagung",
+          "lat": -8.2267,
+          "lng": 113.6056
+        },
+        {
+          "name": "Nogosari",
+          "lat": -8.2189,
+          "lng": 113.6211
+        },
+        {
+          "name": "Rambipuji",
+          "lat": -8.2269,
+          "lng": 113.6125
+        },
+        {
+          "name": "Rowotamtu",
+          "lat": -8.2400,
+          "lng": 113.6100
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Semboro",
+      "lat": -8.1831,
+      "lng": 113.4436,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Semboro",
+      "villages": [
+        {
+          "name": "Pondok Dalem",
+          "lat": -8.1889,
+          "lng": 113.4389
+        },
+        {
+          "name": "Pondok Joyo",
+          "lat": -8.1778,
+          "lng": 113.4489
+        },
+        {
+          "name": "Rejoagung",
+          "lat": -8.1956,
+          "lng": 113.4450
+        },
+        {
+          "name": "Semboro",
+          "lat": -8.1831,
+          "lng": 113.4436
+        },
+        {
+          "name": "Sidomulyo",
+          "lat": -8.1722,
+          "lng": 113.4400
+        },
+        {
+          "name": "Sidomukti",
+          "lat": -8.1900,
+          "lng": 113.4511
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Silo",
+      "lat": -8.0519,
+      "lng": 113.8939,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Silo",
+      "villages": [
+        {
+          "name": "Garahan",
+          "lat": -8.0456,
+          "lng": 113.8889
+        },
+        {
+          "name": "Harjomulyo",
+          "lat": -8.0589,
+          "lng": 113.9000
+        },
+        {
+          "name": "Karangharjo",
+          "lat": -8.0633,
+          "lng": 113.8900
+        },
+        {
+          "name": "Mulyorejo",
+          "lat": -8.0400,
+          "lng": 113.8956
+        },
+        {
+          "name": "Pace",
+          "lat": -8.0700,
+          "lng": 113.8867
+        },
+        {
+          "name": "Sempolan",
+          "lat": -8.0489,
+          "lng": 113.9067
+        },
+        {
+          "name": "Silo",
+          "lat": -8.0519,
+          "lng": 113.8939
+        },
+        {
+          "name": "Sumberjati",
+          "lat": -8.0356,
+          "lng": 113.8833
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Sukorambi",
+      "lat": -8.1447,
+      "lng": 113.6622,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Sukorambi",
+      "villages": [
+        {
+          "name": "Jubung",
+          "lat": -8.1511,
+          "lng": 113.6578
+        },
+        {
+          "name": "Karangpring",
+          "lat": -8.1389,
+          "lng": 113.6667
+        },
+        {
+          "name": "Klungkung",
+          "lat": -8.1556,
+          "lng": 113.6700
+        },
+        {
+          "name": "Sukorambi",
+          "lat": -8.1447,
+          "lng": 113.6622
+        },
+        {
+          "name": "Sukorambi Wetan",
+          "lat": -8.1400,
+          "lng": 113.6556
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Sukowono",
+      "lat": -8.0878,
+      "lng": 113.8003,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Sukowono",
+      "villages": [
+        {
+          "name": "Arjasa",
+          "lat": -8.0811,
+          "lng": 113.7956
+        },
+        {
+          "name": "Baletbaru",
+          "lat": -8.0933,
+          "lng": 113.8056
+        },
+        {
+          "name": "Dawuhanmangli",
+          "lat": -8.0789,
+          "lng": 113.8089
+        },
+        {
+          "name": "Mojogeneng",
+          "lat": -8.1000,
+          "lng": 113.7967
+        },
+        {
+          "name": "Pocangan",
+          "lat": -8.0856,
+          "lng": 113.8133
+        },
+        {
+          "name": "Sukokerto",
+          "lat": -8.0956,
+          "lng": 113.7900
+        },
+        {
+          "name": "Sukorejo",
+          "lat": -8.0750,
+          "lng": 113.8033
+        },
+        {
+          "name": "Sukowono",
+          "lat": -8.0878,
+          "lng": 113.8003
+        },
+        {
+          "name": "Sumberwringin",
+          "lat": -8.1056,
+          "lng": 113.8011
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Sumberbaru",
+      "lat": -8.2578,
+      "lng": 113.4394,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Sumberbaru",
+      "villages": [
+        {
+          "name": "Jambesari",
+          "lat": -8.2633,
+          "lng": 113.4350
+        },
+        {
+          "name": "Karangbayat",
+          "lat": -8.2522,
+          "lng": 113.4433
+        },
+        {
+          "name": "Kedungrejo",
+          "lat": -8.2700,
+          "lng": 113.4311
+        },
+        {
+          "name": "Pringgowirawan",
+          "lat": -8.2656,
+          "lng": 113.4489
+        },
+        {
+          "name": "Rowotengah",
+          "lat": -8.2489,
+          "lng": 113.4367
+        },
+        {
+          "name": "Sumberagung",
+          "lat": -8.2750,
+          "lng": 113.4422
+        },
+        {
+          "name": "Sumberbaru",
+          "lat": -8.2578,
+          "lng": 113.4394
+        },
+        {
+          "name": "Sumberdari",
+          "lat": -8.2456,
+          "lng": 113.4483
+        },
+        {
+          "name": "Wonorejo",
+          "lat": -8.2600,
+          "lng": 113.4522
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Sumberjambe",
+      "lat": -8.0994,
+      "lng": 113.9581,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Sumberjambe",
+      "villages": [
+        {
+          "name": "Cumedak",
+          "lat": -8.1050,
+          "lng": 113.9533
+        },
+        {
+          "name": "Gunungmalang",
+          "lat": -8.0933,
+          "lng": 113.9622
+        },
+        {
+          "name": "Jambearum",
+          "lat": -8.1100,
+          "lng": 113.9500
+        },
+        {
+          "name": "Plerean",
+          "lat": -8.0889,
+          "lng": 113.9689
+        },
+        {
+          "name": "Pringgondani",
+          "lat": -8.1156,
+          "lng": 113.9556
+        },
+        {
+          "name": "Randuagung",
+          "lat": -8.1011,
+          "lng": 113.9700
+        },
+        {
+          "name": "Rowosari",
+          "lat": -8.0800,
+          "lng": 113.9611
+        },
+        {
+          "name": "Sumberjambe",
+          "lat": -8.0994,
+          "lng": 113.9581
+        },
+        {
+          "name": "Sumberpakem",
+          "lat": -8.1200,
+          "lng": 113.9667
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Tanggul",
+      "lat": -8.1669,
+      "lng": 113.4764,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Tanggul",
+      "villages": [
+        {
+          "name": "Darungan",
+          "lat": -8.1722,
+          "lng": 113.4711
+        },
+        {
+          "name": "Klatakan",
+          "lat": -8.1611,
+          "lng": 113.4800
+        },
+        {
+          "name": "Kramat Sukoharjo",
+          "lat": -8.1789,
+          "lng": 113.4700
+        },
+        {
+          "name": "Manggisan",
+          "lat": -8.1556,
+          "lng": 113.4833
+        },
+        {
+          "name": "Patemon",
+          "lat": -8.1850,
+          "lng": 113.4756
+        },
+        {
+          "name": "Selodakon",
+          "lat": -8.1700,
+          "lng": 113.4900
+        },
+        {
+          "name": "Tanggul Kulon",
+          "lat": -8.1669,
+          "lng": 113.4764
+        },
+        {
+          "name": "Tanggul Wetan",
+          "lat": -8.1633,
+          "lng": 113.4889
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Tempurejo",
+      "lat": -8.3581,
+      "lng": 113.6694,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Tempurejo",
+      "villages": [
+        {
+          "name": "Andongrejo",
+          "lat": -8.3633,
+          "lng": 113.6650
+        },
+        {
+          "name": "Curahnongko",
+          "lat": -8.3511,
+          "lng": 113.6733
+        },
+        {
+          "name": "Curahtakir",
+          "lat": -8.3700,
+          "lng": 113.6611
+        },
+        {
+          "name": "Kebondalem",
+          "lat": -8.3556,
+          "lng": 113.6800
+        },
+        {
+          "name": "Pondokrejo",
+          "lat": -8.3450,
+          "lng": 113.6711
+        },
+        {
+          "name": "Sanenrejo",
+          "lat": -8.3789,
+          "lng": 113.6667
+        },
+        {
+          "name": "Sidodadi",
+          "lat": -8.3611,
+          "lng": 113.6900
+        },
+        {
+          "name": "Tempurejo",
+          "lat": -8.3581,
+          "lng": 113.6694
+        },
+        {
+          "name": "Wonoasri",
+          "lat": -8.3489,
+          "lng": 113.6600
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Umbulsari",
+      "lat": -8.2503,
+      "lng": 113.5206,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Umbulsari",
+      "villages": [
+        {
+          "name": "Gadingrejo",
+          "lat": -8.2556,
+          "lng": 113.5156
+        },
+        {
+          "name": "Gunungsari",
+          "lat": -8.2450,
+          "lng": 113.5250
+        },
+        {
+          "name": "Mundurejo",
+          "lat": -8.2600,
+          "lng": 113.5111
+        },
+        {
+          "name": "Paleran",
+          "lat": -8.2400,
+          "lng": 113.5289
+        },
+        {
+          "name": "Sukoreno",
+          "lat": -8.2656,
+          "lng": 113.5189
+        },
+        {
+          "name": "Tambakrejo",
+          "lat": -8.2500,
+          "lng": 113.5350
+        },
+        {
+          "name": "Tanjungsari",
+          "lat": -8.2433,
+          "lng": 113.5117
+        },
+        {
+          "name": "Umbulsari",
+          "lat": -8.2503,
+          "lng": 113.5206
+        }
+      ]
+    },
+    {
+      "name": "Kecamatan Wuluhan",
+      "lat": -8.3397,
+      "lng": 113.5339,
+      "province": "Jawa Timur",
+      "regency": "Jember",
+      "district": "Wuluhan",
+      "villages": [
+        {
+          "name": "Ampel",
+          "lat": -8.3450,
+          "lng": 113.5289
+        },
+        {
+          "name": "Dukuhdempok",
+          "lat": -8.3333,
+          "lng": 113.5389
+        },
+        {
+          "name": "Glundengan",
+          "lat": -8.3500,
+          "lng": 113.5250
+        },
+        {
+          "name": "Kesilir",
+          "lat": -8.3289,
+          "lng": 113.5411
+        },
+        {
+          "name": "Lojejer",
+          "lat": -8.3556,
+          "lng": 113.5311
+        },
+        {
+          "name": "Tamansari",
+          "lat": -8.3400,
+          "lng": 113.5500
+        },
+        {
+          "name": "Tanjungrejo",
+          "lat": -8.3372,
+          "lng": 113.5189
+        }
+      ]
+    }
+  ]
+}

@@ -36,7 +36,10 @@ import {
   X,
   Link,
   Copy,
-  Info
+  Info,
+  Shield,
+  Zap,
+  FileArchive,
 } from 'lucide-react';
 import {
   Card,
@@ -58,6 +61,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import {
   Table,
@@ -115,6 +120,7 @@ interface FileItem {
   createdAt: string;
   storage: string;
   isPublic: boolean;
+  storageType: string;
 }
 
 interface StorageStats {
@@ -131,11 +137,11 @@ interface StorageStats {
 
 export default function StorageSettingsPage() {
   const [settings, setSettings] = useState<StorageSettings>({
-    provider: 'neon',
+    provider: 'supabase',
     databaseUrl: '',
     databaseName: 'windkite_db',
     storageEndpoint: '',
-    storageBucket: 'kite-designs',
+    storageBucket: 'kite-frames',
     storageUrl: '',
     accessKey: '',
     secretKey: '',
@@ -154,6 +160,7 @@ export default function StorageSettingsPage() {
   const [stats, setStats] = useState<StorageStats | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStorage, setFilterStorage] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('all');
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -162,6 +169,7 @@ export default function StorageSettingsPage() {
   const [deletingFiles, setDeletingFiles] = useState(false);
   const [backingUp, setBackingUp] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState('supabase');
 
   useEffect(() => {
     fetchSettings();
@@ -175,6 +183,7 @@ export default function StorageSettingsPage() {
       if (response.ok) {
         const data = await response.json();
         setSettings((prev) => ({ ...prev, ...data }));
+        if (data.provider) setActiveTab(data.provider);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -188,12 +197,9 @@ export default function StorageSettingsPage() {
       if (response.ok) {
         const data = await response.json();
         setFiles(data);
-      } else {
-        toast.error('Gagal memuat daftar file');
       }
     } catch (error) {
       console.error('Error fetching files:', error);
-      toast.error('Gagal memuat daftar file');
     }
   };
 
@@ -233,30 +239,6 @@ export default function StorageSettingsPage() {
     }
   };
 
-  const handleBackup = async () => {
-    setBackingUp(true);
-    try {
-      const response = await fetch('/api/admin/settings/storage/backup', {
-        method: 'POST',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(`Backup berhasil dibuat: ${data.filename || 'database-backup'}`);
-        await fetchFiles();
-        await fetchStats();
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Gagal membuat backup');
-      }
-    } catch (error) {
-      console.error('Error creating backup:', error);
-      toast.error('Terjadi kesalahan saat membuat backup');
-    } finally {
-      setBackingUp(false);
-    }
-  };
-
   const handleMoveToDrive = async () => {
     setMovingFiles(true);
     try {
@@ -278,29 +260,6 @@ export default function StorageSettingsPage() {
       toast.error('Terjadi kesalahan');
     } finally {
       setMovingFiles(false);
-    }
-  };
-
-  const handleDeleteFile = async () => {
-    if (!selectedFile) return;
-    
-    try {
-      const response = await fetch(`/api/admin/settings/storage/files/${selectedFile.id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        toast.success('File berhasil dihapus');
-        await fetchFiles();
-        await fetchStats();
-        setIsDeleteDialogOpen(false);
-      } else {
-        const error = await response.json();
-        toast.error(error.error || 'Gagal menghapus file');
-      }
-    } catch (error) {
-      console.error('Error deleting file:', error);
-      toast.error('Terjadi kesalahan');
     }
   };
 
@@ -328,6 +287,53 @@ export default function StorageSettingsPage() {
     }
   };
 
+  const handleBackup = async () => {
+    setBackingUp(true);
+    try {
+      const response = await fetch('/api/admin/settings/storage/backup', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(`Backup berhasil dibuat: ${data.filename || 'database-backup'}`);
+        await fetchFiles();
+        await fetchStats();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Gagal membuat backup');
+      }
+    } catch (error) {
+      console.error('Error creating backup:', error);
+      toast.error('Terjadi kesalahan saat membuat backup');
+    } finally {
+      setBackingUp(false);
+    }
+  };
+
+  const handleDeleteFile = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      const response = await fetch(`/api/admin/settings/storage/files/${selectedFile.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast.success('File berhasil dihapus');
+        await fetchFiles();
+        await fetchStats();
+        setIsDeleteDialogOpen(false);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Gagal menghapus file');
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast.error('Terjadi kesalahan');
+    }
+  };
+
   const handleCopyUrl = (url: string) => {
     if (!url) {
       toast.error('URL tidak tersedia');
@@ -339,28 +345,37 @@ export default function StorageSettingsPage() {
     setTimeout(() => setCopied(false), 3000);
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-      failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-      running: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
-    };
-    const labels: Record<string, string> = {
-      success: 'Success',
-      failed: 'Failed',
-      running: 'Running',
-    };
-    return <Badge className={styles[status]}>{labels[status]}</Badge>;
+  // Fixed: Properly typed handlers for Select components
+  const handleRegionChange = (value: string | null) => {
+    setSettings({ ...settings, region: value || 'us-east-2' });
+  };
+
+  const handleFilterStorageChange = (value: string | null) => {
+    setFilterStorage(value || 'all');
+  };
+
+  const handleFilterTypeChange = (value: string | null) => {
+    setFilterType(value || 'all');
   };
 
   const getStorageBadge = (storage: string) => {
-    if (storage === 'neon') {
-      return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Neon S3</Badge>;
+    if (storage === 'supabase' || storage === 'neon') {
+      return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Supabase</Badge>;
     }
     if (storage === 'google_drive') {
       return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Google Drive</Badge>;
     }
     return <Badge variant="secondary">{storage || 'Unknown'}</Badge>;
+  };
+
+  const getStorageTypeBadge = (type: string) => {
+    if (type === 'temporary') {
+      return <Badge variant="outline" className="text-yellow-600 border-yellow-400">Temporary</Badge>;
+    }
+    if (type === 'permanent') {
+      return <Badge variant="outline" className="text-green-600 border-green-400">Permanent</Badge>;
+    }
+    return <Badge variant="outline">{type || 'Unknown'}</Badge>;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -375,37 +390,42 @@ export default function StorageSettingsPage() {
     const matchesSearch = file.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       file.userName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStorage = filterStorage === 'all' || file.storage === filterStorage;
-    return matchesSearch && matchesStorage;
+    const matchesType = filterType === 'all' || file.storageType === filterType;
+    return matchesSearch && matchesStorage && matchesType;
   });
 
-  // Load credentials dari environment variables
   const loadFromEnv = () => {
     setSettings({
       ...settings,
-      storageEndpoint: process.env.NEXT_PUBLIC_AWS_ENDPOINT_URL_S3 || '',
-      accessKey: process.env.NEXT_PUBLIC_AWS_ACCESS_KEY_ID || '',
-      secretKey: process.env.NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY || '',
-      region: process.env.NEXT_PUBLIC_AWS_REGION || 'us-east-2',
-      storageUrl: process.env.NEXT_PUBLIC_NEON_STORAGE_URL || '',
-      storageBucket: 'kite-designs',
+      storageEndpoint: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      accessKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      secretKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      region: 'us-east-2',
+      storageUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      storageBucket: 'kite-frames',
+      provider: 'supabase',
     });
+    setActiveTab('supabase');
     toast.success('Credentials loaded from environment');
   };
 
+  // Get unique storage types for filter
+  const storageTypes = ['all', ...new Set(files.map(f => f.storageType))];
+
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Storage Management</h1>
+          <h1 className="text-2xl font-bold">Storage Management</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Kelola storage dan backup file (Neon S3 & Google Drive)
+            Kelola storage dan backup file (Supabase Storage & Google Drive)
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="px-3 py-1">
             <Database className="h-3.5 w-3.5 mr-1" />
-            Neon S3
+            Supabase
           </Badge>
           <Badge variant="outline" className="px-3 py-1">
             <Cloud className="h-3.5 w-3.5 mr-1" />
@@ -433,41 +453,41 @@ export default function StorageSettingsPage() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Files</CardTitle>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Total Files</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalFiles}</div>
-              <p className="text-xs text-muted-foreground">{stats.totalSize}</p>
+              <div className="text-xl font-bold">{stats.totalFiles}</div>
+              <p className="text-[10px] text-muted-foreground">{stats.totalSize}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Neon S3</CardTitle>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Supabase</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.neonFiles}</div>
-              <p className="text-xs text-muted-foreground">{stats.neonSize}</p>
+              <div className="text-xl font-bold text-blue-600">{stats.neonFiles}</div>
+              <p className="text-[10px] text-muted-foreground">{stats.neonSize}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Google Drive</CardTitle>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Google Drive</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.googleDriveFiles}</div>
-              <p className="text-xs text-muted-foreground">{stats.googleDriveSize}</p>
+              <div className="text-xl font-bold text-green-600">{stats.googleDriveFiles}</div>
+              <p className="text-[10px] text-muted-foreground">{stats.googleDriveSize}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Temp Files</CardTitle>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Temp Files</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.tempFiles}</div>
-              <p className="text-xs text-muted-foreground">Akan dipindahkan ke Drive</p>
+              <div className="text-xl font-bold text-yellow-600">{stats.tempFiles}</div>
+              <p className="text-[10px] text-muted-foreground">Akan dipindahkan ke Drive</p>
             </CardContent>
           </Card>
         </div>
@@ -480,6 +500,7 @@ export default function StorageSettingsPage() {
           onClick={handleMoveToDrive} 
           disabled={movingFiles} 
           className="gap-2"
+          size="sm"
         >
           {movingFiles ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -493,6 +514,7 @@ export default function StorageSettingsPage() {
           onClick={handleDeleteTempFiles} 
           disabled={deletingFiles} 
           className="gap-2 text-red-600 hover:text-red-700"
+          size="sm"
         >
           {deletingFiles ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -506,6 +528,7 @@ export default function StorageSettingsPage() {
           onClick={handleBackup} 
           disabled={backingUp} 
           className="gap-2"
+          size="sm"
         >
           {backingUp ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -516,469 +539,537 @@ export default function StorageSettingsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Settings */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Neon S3 Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Neon S3 Configuration</CardTitle>
-              <CardDescription>
-                Konfigurasi koneksi Neon S3 Object Storage
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">Masukkan kredensial Neon S3</p>
-                <Button variant="ghost" size="sm" onClick={loadFromEnv} className="gap-2 text-blue-500">
-                  <RefreshCw className="h-3 w-3" />
-                  Load from Env
-                </Button>
-              </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+          <TabsTrigger value="supabase">Supabase Storage</TabsTrigger>
+          <TabsTrigger value="google_drive">Google Drive</TabsTrigger>
+        </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="storageEndpoint">Endpoint URL</Label>
-                <Input
-                  id="storageEndpoint"
-                  value={settings.storageEndpoint || ''}
-                  onChange={(e) => setSettings({ ...settings, storageEndpoint: e.target.value })}
-                  placeholder="https://br-shiny-mud-a5szcv3j.storage.c-1.us-east-2.aws.neon.tech"
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Copy dari halaman Credentials di Neon Object Storage
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="storageUrl">Storage URL (Base)</Label>
-                <Input
-                  id="storageUrl"
-                  value={settings.storageUrl || ''}
-                  onChange={(e) => setSettings({ ...settings, storageUrl: e.target.value })}
-                  placeholder="https://br-shiny-mud-a5szcv3j.storage.c-1.us-east-2.aws.neon.tech"
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  URL dasar untuk mengakses file di bucket
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="storageBucket">Bucket Name</Label>
-                  <Input
-                    id="storageBucket"
-                    value={settings.storageBucket || 'kite-designs'}
-                    onChange={(e) => setSettings({ ...settings, storageBucket: e.target.value })}
-                    placeholder="kite-designs"
-                    className="font-mono text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="region">Region</Label>
-                  <Select
-                    value={settings.region || 'us-east-2'}
-                    onValueChange={(value) => setSettings({ ...settings, region: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
-                      <SelectItem value="us-east-2">US East (Ohio)</SelectItem>
-                      <SelectItem value="us-west-1">US West (N. California)</SelectItem>
-                      <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
-                      <SelectItem value="eu-west-1">EU West (Ireland)</SelectItem>
-                      <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
-                      <SelectItem value="ap-southeast-2">Asia Pacific (Sydney)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="accessKey">Access Key</Label>
-                  <Input
-                    id="accessKey"
-                    type="password"
-                    value={settings.accessKey || ''}
-                    onChange={(e) => setSettings({ ...settings, accessKey: e.target.value })}
-                    placeholder="nak_live_xxxxxxxxxxxxx"
-                    className="font-mono text-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="secretKey">Secret Key</Label>
-                  <div className="relative">
-                    <Input
-                      id="secretKey"
-                      type={showSecret ? 'text' : 'password'}
-                      value={settings.secretKey || ''}
-                      onChange={(e) => setSettings({ ...settings, secretKey: e.target.value })}
-                      placeholder="nsk_live_xxxxxxxxxxxxx"
-                      className="font-mono text-sm pr-20"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
-                      onClick={() => setShowSecret(!showSecret)}
-                    >
-                      {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        {/* Supabase Tab */}
+        <TabsContent value="supabase" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Database className="h-5 w-5 text-blue-500" />
+                    Supabase Storage Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Konfigurasi koneksi Supabase Storage untuk penyimpanan sementara
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-muted-foreground">Masukkan kredensial Supabase</p>
+                    <Button variant="ghost" size="sm" onClick={loadFromEnv} className="gap-2 text-blue-500">
+                      <RefreshCw className="h-3 w-3" />
+                      Load from Env
                     </Button>
                   </div>
-                </div>
-              </div>
 
-              <div className="pt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  <Info className="h-3 w-3 inline mr-1" />
-                  URL Format: <code className="bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded text-xs">
-                    {settings.storageUrl || 'https://<endpoint>'}/{settings.storageBucket || 'kite-designs'}/{'{folder}/{file}'}
-                  </code>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Google Drive Configuration */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Google Drive Configuration</CardTitle>
-              <CardDescription>
-                Konfigurasi Google Drive untuk penyimpanan permanen
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="googleDriveFolderId">Google Drive Folder ID</Label>
-                <Input
-                  id="googleDriveFolderId"
-                  value={settings.googleDriveFolderId || ''}
-                  onChange={(e) => setSettings({ ...settings, googleDriveFolderId: e.target.value })}
-                  placeholder="1ABC123DEF456GHI789JKL"
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  ID folder di Google Drive tempat file akan disimpan
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between border-t pt-4">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Auto Move to Drive</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Pindahkan otomatis ke Google Drive
+                  <div className="space-y-2">
+                    <Label htmlFor="storageEndpoint">Supabase URL</Label>
+                    <Input
+                      id="storageEndpoint"
+                      value={settings.storageEndpoint || ''}
+                      onChange={(e) => setSettings({ ...settings, storageEndpoint: e.target.value })}
+                      placeholder="https://qrpddmkcqryxskezdmby.supabase.co"
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Copy dari halaman API di Supabase Console
                     </p>
                   </div>
-                  <Switch
-                    checked={settings.autoMoveToDrive}
-                    onCheckedChange={(checked) => setSettings({ ...settings, autoMoveToDrive: checked })}
-                  />
-                </div>
 
-                <div className="space-y-2 border-t pt-4">
-                  <Label htmlFor="tempStorageDays">Temp Storage (days)</Label>
-                  <Input
-                    id="tempStorageDays"
-                    type="number"
-                    min={1}
-                    max={30}
-                    value={settings.tempStorageDays}
-                    onChange={(e) => setSettings({ ...settings, tempStorageDays: parseInt(e.target.value) || 7 })}
-                    className="w-24"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Hari penyimpanan di Neon sebelum dipindahkan
-                  </p>
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="storageBucket">Bucket Name</Label>
+                      <Input
+                        id="storageBucket"
+                        value={settings.storageBucket || 'kite-frames'}
+                        onChange={(e) => setSettings({ ...settings, storageBucket: e.target.value })}
+                        placeholder="kite-frames"
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Bucket untuk menyimpan file sementara
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="region">Region</Label>
+                      <Select
+                        value={settings.region || 'us-east-2'}
+                        onValueChange={handleRegionChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                          <SelectItem value="us-east-2">US East (Ohio)</SelectItem>
+                          <SelectItem value="us-west-1">US West (N. California)</SelectItem>
+                          <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                          <SelectItem value="eu-west-1">EU West (Ireland)</SelectItem>
+                          <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                          <SelectItem value="ap-southeast-2">Asia Pacific (Sydney)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="accessKey">Google Service Account Email</Label>
-                <Input
-                  id="accessKey"
-                  value={settings.accessKey || ''}
-                  onChange={(e) => setSettings({ ...settings, accessKey: e.target.value })}
-                  placeholder="service-account@project.iam.gserviceaccount.com"
-                  className="font-mono text-sm"
-                />
-              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="accessKey">Anon Key</Label>
+                      <Input
+                        id="accessKey"
+                        type="password"
+                        value={settings.accessKey || ''}
+                        onChange={(e) => setSettings({ ...settings, accessKey: e.target.value })}
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="secretKey">Service Role Key</Label>
+                      <div className="relative">
+                        <Input
+                          id="secretKey"
+                          type={showSecret ? 'text' : 'password'}
+                          value={settings.secretKey || ''}
+                          onChange={(e) => setSettings({ ...settings, secretKey: e.target.value })}
+                          placeholder="sb_secret_xxxxxxxxxxxxx"
+                          className="font-mono text-sm pr-20"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-1/2 -translate-y-1/2"
+                          onClick={() => setShowSecret(!showSecret)}
+                        >
+                          {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Service role key untuk upload file (dari Settings → API)
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="secretKey">Private Key</Label>
-                <div className="relative">
-                  <Input
-                    id="secretKey"
-                    type={showSecret ? 'text' : 'password'}
-                    value={settings.secretKey || ''}
-                    onChange={(e) => setSettings({ ...settings, secretKey: e.target.value })}
-                    placeholder="-----BEGIN PRIVATE KEY-----..."
-                    className="font-mono text-sm pr-20"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    onClick={() => setShowSecret(!showSecret)}
-                  >
-                    {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="pt-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <p className="text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                      <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <span>
+                        File akan disimpan di bucket <code className="bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded text-[10px]">{settings.storageBucket || 'kite-frames'}</code> 
+                        {' '}dengan status <strong>Temporary</strong> selama {settings.tempStorageDays || 7} hari sebelum dipindahkan ke Google Drive.
+                      </span>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* File Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">File Management</CardTitle>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Bucket Info</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Bucket</span>
+                    <span className="font-medium font-mono text-xs">{settings.storageBucket || 'kite-frames'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Provider</span>
+                    <span className="font-medium">Supabase</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Region</span>
+                    <span className="font-medium">{settings.region || 'us-east-2'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Temp Storage</span>
+                    <span className="font-medium">{settings.tempStorageDays || 7} days</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge className="bg-green-100 text-green-700">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Connected
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Google Drive Tab */}
+        <TabsContent value="google_drive" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Cloud className="h-5 w-5 text-green-500" />
+                    Google Drive Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Konfigurasi Google Drive untuk penyimpanan permanen
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="googleDriveFolderId">Google Drive Folder ID</Label>
+                    <Input
+                      id="googleDriveFolderId"
+                      value={settings.googleDriveFolderId || ''}
+                      onChange={(e) => setSettings({ ...settings, googleDriveFolderId: e.target.value })}
+                      placeholder="1ABC123DEF456GHI789JKL"
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      ID folder di Google Drive tempat file akan disimpan (ambil dari URL folder)
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between border rounded-lg p-4">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm">Auto Move to Drive</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Pindahkan otomatis ke Google Drive
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings.autoMoveToDrive}
+                        onCheckedChange={(checked) => setSettings({ ...settings, autoMoveToDrive: checked })}
+                      />
+                    </div>
+
+                    <div className="space-y-1 border rounded-lg p-4">
+                      <Label htmlFor="tempStorageDays" className="text-sm">Temp Storage (hari)</Label>
+                      <Input
+                        id="tempStorageDays"
+                        type="number"
+                        min={1}
+                        max={30}
+                        value={settings.tempStorageDays}
+                        onChange={(e) => setSettings({ ...settings, tempStorageDays: parseInt(e.target.value) || 7 })}
+                        className="w-24"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Hari penyimpanan di Supabase sebelum dipindahkan
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="accessKey">Service Account Email</Label>
+                    <Input
+                      id="accessKey"
+                      value={settings.accessKey || ''}
+                      onChange={(e) => setSettings({ ...settings, accessKey: e.target.value })}
+                      placeholder="service-account@project.iam.gserviceaccount.com"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="secretKey">Private Key</Label>
+                    <div className="relative">
+                      <Input
+                        id="secretKey"
+                        type={showSecret ? 'text' : 'password'}
+                        value={settings.secretKey || ''}
+                        onChange={(e) => setSettings({ ...settings, secretKey: e.target.value })}
+                        placeholder="-----BEGIN PRIVATE KEY-----..."
+                        className="font-mono text-sm pr-20"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                        onClick={() => setShowSecret(!showSecret)}
+                      >
+                        {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Private key dari service account Google
+                    </p>
+                  </div>
+
+                  <div className="pt-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                    <p className="text-xs text-green-700 dark:text-green-300 flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      <span>
+                        File akan otomatis dipindahkan ke Google Drive setelah <strong>{settings.tempStorageDays || 7} hari</strong> 
+                        {' '}dan menjadi <strong>Permanent</strong> di folder <code className="bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded text-[10px]">
+                          {settings.googleDriveFolderId || '[Folder ID]'}
+                        </code>
+                      </span>
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Drive Info</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Folder ID</span>
+                    <span className="font-mono text-xs truncate max-w-[100px]">
+                      {settings.googleDriveFolderId ? '✅' : '❌ Not Set'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Auto Move</span>
+                    <Badge className={settings.autoMoveToDrive ? 'bg-green-100 text-green-700' : 'bg-gray-100'}>
+                      {settings.autoMoveToDrive ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Files in Drive</span>
+                    <span className="font-medium">{stats?.googleDriveFiles || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Drive Size</span>
+                    <span className="font-medium">{stats?.googleDriveSize || '0 Bytes'}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge className={settings.googleDriveFolderId ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                      {settings.googleDriveFolderId ? (
+                        <>
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Configured
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Not Configured
+                        </>
+                      )}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* File Management */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileArchive className="h-5 w-5 text-muted-foreground" />
+                File Management
+              </CardTitle>
               <CardDescription>
-                Kelola file yang disimpan di Neon S3 dan Google Drive
+                Kelola file yang disimpan di Supabase Storage dan Google Drive
               </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Search & Filter */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Cari file atau pengguna..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={filterStorage} onValueChange={setFilterStorage}>
-                  <SelectTrigger className="w-40">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Storage" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua</SelectItem>
-                    <SelectItem value="neon">Neon S3</SelectItem>
-                    <SelectItem value="google_drive">Google Drive</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" onClick={fetchFiles} size="sm">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {files.length} total files
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search & Filter - Fixed Select handlers */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cari file atau pengguna..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+            <Select value={filterStorage} onValueChange={handleFilterStorageChange}>
+              <SelectTrigger className="w-36 h-9 text-sm">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Storage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                <SelectItem value="supabase">Supabase</SelectItem>
+                <SelectItem value="google_drive">Google Drive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterType} onValueChange={handleFilterTypeChange}>
+              <SelectTrigger className="w-36 h-9 text-sm">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                <SelectItem value="temporary">Temporary</SelectItem>
+                <SelectItem value="permanent">Permanent</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={fetchFiles} size="sm" className="h-9">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
 
-              {/* Files Table */}
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">File</TableHead>
-                      <TableHead className="w-[80px]">Size</TableHead>
-                      <TableHead className="w-[120px]">User</TableHead>
-                      <TableHead className="w-[100px]">Storage</TableHead>
-                      <TableHead className="w-[130px]">Created</TableHead>
-                      <TableHead className="w-[120px] text-right">Action</TableHead>
+          {/* Files Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">File</TableHead>
+                  <TableHead className="w-[80px]">Size</TableHead>
+                  <TableHead className="w-[120px]">User</TableHead>
+                  <TableHead className="w-[100px]">Storage</TableHead>
+                  <TableHead className="w-[100px]">Type</TableHead>
+                  <TableHead className="w-[130px]">Created</TableHead>
+                  <TableHead className="w-[120px] text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredFiles.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-sm">
+                      Tidak ada file ditemukan
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredFiles.slice(0, 20).map((file) => (
+                    <TableRow key={file.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <FileImage className="h-5 w-5 text-slate-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm truncate max-w-[120px]" title={file.name}>
+                              {file.name || 'Untitled'}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">{file.category || 'General'}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {file.size > 0 ? formatFileSize(file.size) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={file.userImage || ''} />
+                            <AvatarFallback className="text-[10px]">
+                              {file.userName?.charAt(0).toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm truncate max-w-[60px]" title={file.userName || 'Unknown'}>
+                            {file.userName || 'Unknown'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStorageBadge(file.storage)}</TableCell>
+                      <TableCell>{getStorageTypeBadge(file.storageType)}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {file.createdAt ? formatDistanceToNow(new Date(file.createdAt), { addSuffix: true, locale: id }) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              setSelectedFile(file);
+                              setIsViewDialogOpen(true);
+                            }}
+                            disabled={!file.url}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                            onClick={() => {
+                              setSelectedFile(file);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleCopyUrl(file.url)}
+                            disabled={!file.url}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredFiles.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          Tidak ada file ditemukan
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredFiles.slice(0, 20).map((file) => (
-                        <TableRow key={file.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                <Image className="h-5 w-5 text-slate-500" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="font-medium text-sm truncate max-w-[120px]" title={file.name}>
-                                  {file.name || 'Untitled'}
-                                </div>
-                                <div className="text-xs text-muted-foreground truncate">{file.category || 'General'}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm whitespace-nowrap">
-                            {file.size > 0 ? formatFileSize(file.size) : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={file.userImage || ''} />
-                                <AvatarFallback>
-                                  {file.userName?.charAt(0).toUpperCase() || 'U'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm truncate max-w-[60px]" title={file.userName || 'Unknown'}>
-                                {file.userName || 'Unknown'}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStorageBadge(file.storage)}</TableCell>
-                          <TableCell className="text-sm whitespace-nowrap">
-                            {file.createdAt ? formatDistanceToNow(new Date(file.createdAt), { addSuffix: true, locale: id }) : '-'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => {
-                                  setSelectedFile(file);
-                                  setIsViewDialogOpen(true);
-                                }}
-                                disabled={!file.url}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                                onClick={() => {
-                                  setSelectedFile(file);
-                                  setIsDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleCopyUrl(file.url)}
-                                disabled={!file.url}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
-              {files.length > 20 && (
-                <div className="text-center text-sm text-muted-foreground">
-                  Menampilkan 20 dari {files.length} file
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          {files.length > 20 && (
+            <div className="text-center text-sm text-muted-foreground">
+              Menampilkan 20 dari {files.length} file
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Storage Usage */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Storage Usage</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm">Used</span>
-                  <span className="text-sm font-medium">{stats?.totalSize || '0 GB'} / 10 GB</span>
-                </div>
-                <Progress value={24} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1">24% used</p>
+      {/* Quick Tips */}
+      <Card className="border-dashed border-primary/20">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                <Zap className="h-4 w-4 text-blue-600" />
               </div>
+              <div>
+                <p className="font-medium">1. Upload ke Supabase</p>
+                <p className="text-xs text-muted-foreground">File otomatis tersimpan di bucket kite-frames dengan status Temporary</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center flex-shrink-0">
+                <Clock className="h-4 w-4 text-yellow-600" />
+              </div>
+              <div>
+                <p className="font-medium">2. Tunggu {settings.tempStorageDays || 7} Hari</p>
+                <p className="text-xs text-muted-foreground">File disimpan sementara di Supabase sebelum dipindahkan</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                <Cloud className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium">3. Pindah ke Google Drive</p>
+                <p className="text-xs text-muted-foreground">File otomatis dipindahkan ke Google Drive dan menjadi Permanent</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-center">
-                  <FileImage className="h-5 w-5 text-pink-500 mx-auto mb-1" />
-                  <p className="text-sm font-medium">{stats?.totalSize || '0 GB'}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-center">
-                  <Database className="h-5 w-5 text-blue-500 mx-auto mb-1" />
-                  <p className="text-sm font-medium">{stats?.neonFiles || 0}</p>
-                  <p className="text-xs text-muted-foreground">Neon S3</p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-center">
-                  <Cloud className="h-5 w-5 text-green-500 mx-auto mb-1" />
-                  <p className="text-sm font-medium">{stats?.googleDriveFiles || 0}</p>
-                  <p className="text-xs text-muted-foreground">GDrive</p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-center">
-                  <Clock className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
-                  <p className="text-sm font-medium">{stats?.tempFiles || 0}</p>
-                  <p className="text-xs text-muted-foreground">Temp</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Storage Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Storage Info</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Provider</span>
-                <span className="font-medium capitalize">{settings.provider || 'neon'}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Bucket</span>
-                <span className="font-medium font-mono text-xs">{settings.storageBucket || '-'}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Region</span>
-                <span className="font-medium">{settings.region || '-'}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Temp Storage</span>
-                <span className="font-medium">{settings.tempStorageDays || 7} days</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Auto Move</span>
-                <Badge className={settings.autoMoveToDrive ? 'bg-green-100 text-green-700' : 'bg-gray-100'}>
-                  {settings.autoMoveToDrive ? 'Enabled' : 'Disabled'}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between text-sm border-t pt-2">
-                <span className="text-muted-foreground">Endpoint</span>
-                <span className="font-mono text-xs truncate max-w-[120px]" title={settings.storageEndpoint}>
-                  {settings.storageEndpoint ? '✅' : '❌ Not Set'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Tips */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Tips</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <div className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>File AI otomatis tersimpan di Neon S3</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>File akan dipindahkan ke Google Drive setelah {settings.tempStorageDays || 7} hari</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Backup database dapat dilakukan manual atau otomatis</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* View File Dialog */}
+      {/* View File Dialog - Removed asChild */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -991,7 +1082,7 @@ export default function StorageSettingsPage() {
             <div className="space-y-4 py-4">
               <div className="flex items-center gap-4">
                 <div className="h-20 w-20 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
-                  <Image className="h-10 w-10 text-slate-500" />
+                  <FileImage className="h-10 w-10 text-slate-500" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold truncate">{selectedFile.name || 'Untitled'}</h3>
@@ -1006,6 +1097,10 @@ export default function StorageSettingsPage() {
                   <p className="font-medium">{getStorageBadge(selectedFile.storage)}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-muted-foreground">Type</p>
+                  <p>{getStorageTypeBadge(selectedFile.storageType)}</p>
+                </div>
+                <div>
                   <p className="text-sm text-muted-foreground">Created</p>
                   <p className="font-medium text-sm">
                     {selectedFile.createdAt ? format(new Date(selectedFile.createdAt), 'dd MMM yyyy HH:mm', { locale: id }) : '-'}
@@ -1016,18 +1111,12 @@ export default function StorageSettingsPage() {
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                       <AvatarImage src={selectedFile.userImage || ''} />
-                      <AvatarFallback>
+                      <AvatarFallback className="text-[10px]">
                         {selectedFile.userName?.charAt(0).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <span className="font-medium text-sm truncate">{selectedFile.userName || 'Unknown'}</span>
                   </div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Public</p>
-                  <Badge className={selectedFile.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100'}>
-                    {selectedFile.isPublic ? 'Yes' : 'No'}
-                  </Badge>
                 </div>
               </div>
 
@@ -1078,7 +1167,7 @@ export default function StorageSettingsPage() {
             <div className="py-4">
               <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <Image className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  <FileImage className="h-5 w-5 text-red-500 flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="font-medium truncate">{selectedFile.name || 'Untitled'}</p>
                     <p className="text-sm text-muted-foreground">

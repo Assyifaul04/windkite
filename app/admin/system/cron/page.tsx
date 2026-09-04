@@ -4,30 +4,21 @@
 import { useState, useEffect } from 'react';
 import {
   Clock,
-  Calendar,
   CheckCircle,
-  XCircle,
   RefreshCw,
   Play,
   Pause,
   Trash2,
   Plus,
   Edit,
-  AlertCircle,
-  Clock as ClockIcon,
   Timer,
   Zap,
-  Database,
-  Cloud,
   Activity,
   MoreVertical,
-  Download,
-  Upload
 } from 'lucide-react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -54,6 +45,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,7 +60,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 interface CronJob {
@@ -238,6 +230,11 @@ export default function CronJobsPage() {
     });
     setDialogMode('edit');
     setIsDialogOpen(true);
+  };
+
+  // Fixed: Properly typed schedule change handler
+  const handleScheduleChange = (value: string | null) => {
+    setFormData({ ...formData, schedule: value || '0 */6 * * *' });
   };
 
   const getStatusBadge = (status: string) => {
@@ -427,13 +424,20 @@ export default function CronJobsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                      <DropdownMenuTrigger>
+                        <Button 
+                          variant="ghost" 
+                          className="h-8 w-8 p-0"
+                          type="button"
+                        >
                           <MoreVertical className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                        </DropdownMenuGroup>
                         <DropdownMenuItem onClick={() => handleRunNow(job)}>
                           <Play className="mr-2 h-4 w-4" />
                           Jalankan Sekarang
@@ -457,7 +461,7 @@ export default function CronJobsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
-                          className="text-red-600"
+                          className="text-red-600 hover:text-red-700"
                           onClick={() => {
                             setSelectedJob(job);
                             setIsDeleteDialogOpen(true);
@@ -514,7 +518,7 @@ export default function CronJobsPage() {
                 <Label htmlFor="schedule">Schedule (Cron Expression)</Label>
                 <Select 
                   value={formData.schedule} 
-                  onValueChange={(value) => setFormData({ ...formData, schedule: value })}
+                  onValueChange={handleScheduleChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih schedule" />

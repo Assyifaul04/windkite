@@ -3,7 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { subDays, format } from 'date-fns';
+import { subDays, format, startOfDay, endOfDay } from 'date-fns';
+
+// Helper function untuk mengecek apakah value adalah array
+// Fixed: Proper type guard for JsonValue
+function isArrayOfMarkers(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,15 +28,21 @@ export async function GET(req: NextRequest) {
     const startDate = subDays(new Date(), days);
 
     // Get all users
-    const [users, admins, locations, weatherLogs, designs] = await Promise.all([
+    const [totalUsers, totalAdmins] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { role: 'ADMIN' } }),
-      prisma.savedLocation.count(),
-      prisma.weatherLog.count(),
-      prisma.kiteDesign.count(),
     ]);
 
-    // Get recent users
+    // Get locations and weather logs
+    const [totalLocations, totalWeatherLogs] = await Promise.all([
+      prisma.savedLocation.count(),
+      prisma.weatherLog.count(),
+    ]);
+
+    // Get total designs
+    const totalDesigns = await prisma.kiteDesign.count();
+
+    // Get recent users (5 newest)
     const recentUsers = await prisma.user.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
@@ -43,10 +55,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Get recent activities (combined from all tables)
-    const [recentLocations, recentWeather, recentDesigns] = await Promise.all([
+    // Get recent activities from various tables
+    const [recentLocations, recentWeather, recentDesigns, recentFrames] = await Promise.all([
       prisma.savedLocation.findMany({
-        take: 10,
+        take: 5,
         orderBy: { createdAt: 'desc' },
         include: {
           user: {
@@ -59,7 +71,7 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.weatherLog.findMany({
-        take: 10,
+        take: 5,
         orderBy: { timestamp: 'desc' },
         include: {
           user: {
@@ -77,7 +89,25 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.kiteDesign.findMany({
-        take: 10,
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+          frame: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
+      prisma.kiteFrame.findMany({
+        take: 5,
         orderBy: { createdAt: 'desc' },
         include: {
           user: {
@@ -94,37 +124,59 @@ export async function GET(req: NextRequest) {
     // Format recent activities
     const recentActivities = [
       ...recentLocations.map((loc) => ({
-        id: loc.id,
+        id: `loc-${loc.id}`,
         userId: loc.userId,
-        userName: loc.user?.name || null,
+        userName: loc.user?.name || 'Unknown',
         userImage: loc.user?.image || null,
         action: 'CREATE_LOCATION',
-        details: `Membuat lokasi "${loc.name}"`,
+        details: `Membuat lokasi "${loc.name}" (${loc.latitude}, ${loc.longitude})`,
         timestamp: loc.createdAt.toISOString(),
       })),
       ...recentWeather.map((log) => ({
-        id: log.id,
+        id: `weather-${log.id}`,
         userId: log.userId || 'system',
         userName: log.user?.name || 'System',
         userImage: log.user?.image || null,
         action: 'CREATE_WEATHER',
-        details: `Mencatat cuaca di "${log.location.name}" (${log.windSpeed} km/h)`,
+        details: `Mencatat cuaca di "${log.location?.name || 'Unknown'}" (${log.windSpeed} km/h, ${log.kiteSuitability})`,
         timestamp: log.timestamp.toISOString(),
       })),
       ...recentDesigns.map((design) => ({
-        id: design.id,
+        id: `design-${design.id}`,
         userId: design.userId,
-        userName: design.user?.name || null,
+        userName: design.user?.name || 'Unknown',
         userImage: design.user?.image || null,
         action: 'CREATE_DESIGN',
-        details: `Membuat desain AI "${design.category}"`,
+        details: `Membuat desain "${design.title || 'Untitled'}" menggunakan frame "${design.frame?.name || 'Unknown'}"`,
         timestamp: design.createdAt.toISOString(),
       })),
+      ...recentFrames.map((frame) => {
+        // Safe check untuk markerData
+        const markerCount = (() => {
+          if (!frame.markerData) return 0;
+          // Type guard untuk memastikan markerData adalah array
+          // Fixed: Using the fixed isArrayOfMarkers function
+          if (isArrayOfMarkers(frame.markerData)) {
+            return frame.markerData.length;
+          }
+          return 0;
+        })();
+
+        return {
+          id: `frame-${frame.id}`,
+          userId: frame.userId,
+          userName: frame.user?.name || 'Unknown',
+          userImage: frame.user?.image || null,
+          action: 'CREATE_FRAME',
+          details: `Membuat frame "${frame.name}" dengan ${markerCount} markers`,
+          timestamp: frame.createdAt.toISOString(),
+        };
+      }),
     ]
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 10);
 
-    // Get weather stats
+    // Get weather stats (last 7 days)
     const weatherStats = await prisma.weatherLog.aggregate({
       where: {
         timestamp: {
@@ -143,46 +195,68 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Get design stats
-    const designStats = await prisma.kiteDesign.aggregate({
-      _count: {
-        category: true,
+    // Get wind direction from latest weather log
+    const latestWeather = await prisma.weatherLog.findFirst({
+      where: {
+        timestamp: {
+          gte: startDate,
+        },
       },
+      orderBy: { timestamp: 'desc' },
+      select: { windDirection: true },
     });
 
-    const [frames, covers, publicDesigns, privateDesigns] = await Promise.all([
-      prisma.kiteDesign.count({ where: { category: 'KERANGKA' } }),
-      prisma.kiteDesign.count({ where: { category: 'SAMPUL' } }),
+    // Determine wind direction
+    const getWindDirection = (degrees: number | null | undefined) => {
+      if (degrees === null || degrees === undefined) return 'N/A';
+      const directions = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'];
+      const index = Math.round(degrees / 45) % 8;
+      return directions[index];
+    };
+
+    // Get design stats
+    const [totalFrames, totalDesignsCount, publicDesigns, privateDesigns] = await Promise.all([
+      prisma.kiteFrame.count(),
+      prisma.kiteDesign.count(),
       prisma.kiteDesign.count({ where: { isPublic: true } }),
       prisma.kiteDesign.count({ where: { isPublic: false } }),
     ]);
 
+    // Get design status distribution
+    const designStatusDistribution = await prisma.$transaction([
+      prisma.kiteDesign.count({ where: { status: 'PENDING' } }),
+      prisma.kiteDesign.count({ where: { status: 'PROCESSING' } }),
+      prisma.kiteDesign.count({ where: { status: 'COMPLETED' } }),
+      prisma.kiteDesign.count({ where: { status: 'FAILED' } }),
+    ]);
+
     // Get chart data (daily growth)
     const chartData = [];
-    for (let i = 0; i <= days; i++) {
+    for (let i = days; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dateStr = format(date, 'yyyy-MM-dd');
-      const nextDate = subDays(new Date(), i - 1);
+      const dayStart = startOfDay(date);
+      const dayEnd = endOfDay(date);
       
       const [usersCount, locationsCount, designsCount] = await Promise.all([
         prisma.user.count({
           where: {
             createdAt: {
-              lte: date,
+              lte: dayEnd,
             },
           },
         }),
         prisma.savedLocation.count({
           where: {
             createdAt: {
-              lte: date,
+              lte: dayEnd,
             },
           },
         }),
         prisma.kiteDesign.count({
           where: {
             createdAt: {
-              lte: date,
+              lte: dayEnd,
             },
           },
         }),
@@ -196,30 +270,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    chartData.reverse();
-
-    // Get wind direction
-    const windDirectionData = await prisma.weatherLog.findFirst({
-      where: {
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      orderBy: { timestamp: 'desc' },
-      select: { windDirection: true },
-    });
-
-    const directions = ['Utara', 'Timur', 'Selatan', 'Barat'];
-    const windDirection = windDirectionData?.windDirection !== undefined
-      ? directions[Math.round(windDirectionData.windDirection / 90) % 4]
-      : 'N/A';
-
     return NextResponse.json({
-      totalUsers: users,
-      totalAdmins: admins,
-      totalLocations: locations,
-      totalWeatherLogs: weatherLogs,
-      totalDesigns: designs,
+      totalUsers,
+      totalAdmins,
+      totalLocations,
+      totalWeatherLogs,
+      totalDesigns: totalDesignsCount,
       recentUsers,
       recentActivities,
       weatherStats: {
@@ -227,20 +283,24 @@ export async function GET(req: NextRequest) {
         maxWindSpeed: Math.round(weatherStats._max.windSpeed || 0),
         minWindSpeed: Math.round(weatherStats._min.windSpeed || 0),
         avgTemperature: Math.round(weatherStats._avg.temperature || 0),
-        windDirection,
+        windDirection: getWindDirection(latestWeather?.windDirection),
       },
       designStats: {
-        totalFrames: frames,
-        totalCovers: covers,
+        totalFrames,
+        totalCovers: totalDesignsCount,
         publicDesigns,
         privateDesigns,
+        pending: designStatusDistribution[0],
+        processing: designStatusDistribution[1],
+        completed: designStatusDistribution[2],
+        failed: designStatusDistribution[3],
       },
       chartData,
     });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch dashboard data' },
+      { error: 'Failed to fetch dashboard data', details: String(error) },
       { status: 500 }
     );
   }

@@ -84,11 +84,19 @@ export async function GET() {
       })),
       designs: designs.map(design => ({
         id: design.id,
-        prompt: design.prompt,
-        imageUrl: design.imageUrl,
-        category: design.category,
+        // Use fields that actually exist in your KiteDesign model
+        // Based on the error messages, these are the fields that exist:
+        // id, status, isPublic, userId, createdAt, updatedAt, frameId, 
+        // coverImageUrl, thumbnailUrl, etc.
+        coverImageUrl: design.coverImageUrl, // Changed from imageUrl to coverImageUrl
+        thumbnailUrl: design.thumbnailUrl, // Added thumbnailUrl
+        status: design.status,
         isPublic: design.isPublic,
         createdAt: design.createdAt,
+        // If you have a name or title field, use that instead of prompt
+        // title: design.title, // Uncomment if you have this field
+        // category might need to be fetched from a relation or computed
+        // or you can leave it out if it doesn't exist
       })),
     });
   } catch (error) {

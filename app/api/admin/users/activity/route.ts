@@ -58,6 +58,11 @@ export async function GET(req: NextRequest) {
               image: true,
             },
           },
+          frame: {
+            select: {
+              name: true,
+            },
+          },
         },
       }),
     ]);
@@ -79,7 +84,7 @@ export async function GET(req: NextRequest) {
         userName: log.user?.name || 'System',
         userImage: log.user?.image || null,
         action: 'CREATE_WEATHER',
-        details: `Mencatat cuaca di "${log.location.name}" (${log.windSpeed} km/h)`,
+        details: `Mencatat cuaca di "${log.location.name}" (${log.windSpeed} m/s)`,
         timestamp: log.timestamp.toISOString(),
       })),
       ...kiteDesigns.map((design) => ({
@@ -88,7 +93,7 @@ export async function GET(req: NextRequest) {
         userName: design.user?.name || null,
         userImage: design.user?.image || null,
         action: 'CREATE_DESIGN',
-        details: `Membuat desain AI "${design.category}" dengan prompt: ${design.prompt.slice(0, 50)}...`,
+        details: `Membuat desain layangan${design.title ? ` "${design.title}"` : ''}${design.frame?.name ? ` dengan frame "${design.frame.name}"` : ''}`,
         timestamp: design.createdAt.toISOString(),
       })),
     ];

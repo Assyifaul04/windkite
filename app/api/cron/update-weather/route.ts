@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { addHours } from 'date-fns';
+import { KiteSuitability } from '@prisma/client'; // Import the enum type
 
 // Verifikasi secret untuk keamanan
 const CRON_SECRET = process.env.CRON_SECRET || 'your-secret-key';
@@ -100,12 +101,13 @@ async function fetchWeatherData(lat: number, lng: number) {
   };
 }
 
-function calculateKiteSuitability(windSpeed: number): string {
-  if (windSpeed < 5) return 'TIDAK_LAYAK';
-  if (windSpeed < 15) return 'RINGAN';
-  if (windSpeed < 30) return 'SEMUA';
-  if (windSpeed < 45) return 'BERAT';
-  return 'TIDAK_LAYAK';
+// Fix: Return KiteSuitability enum type instead of string
+function calculateKiteSuitability(windSpeed: number): KiteSuitability {
+  if (windSpeed < 5) return KiteSuitability.TIDAK_LAYAK;
+  if (windSpeed < 15) return KiteSuitability.RINGAN;
+  if (windSpeed < 30) return KiteSuitability.SEMUA;
+  if (windSpeed < 45) return KiteSuitability.BERAT;
+  return KiteSuitability.TIDAK_LAYAK;
 }
 
 async function updateCronJobStatus(jobId: string, success: boolean, runs: number) {

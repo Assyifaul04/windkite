@@ -27,9 +27,9 @@ export async function GET() {
       total,
     });
   } catch (error) {
-    console.error('Error fetching status:', error);
+    console.error('Error fetching design status:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch status' },
+      { error: 'Failed to fetch design status' },
       { status: 500 }
     );
   }

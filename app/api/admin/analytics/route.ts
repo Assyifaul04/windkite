@@ -22,19 +22,30 @@ export async function GET(req: NextRequest) {
     const startDate = subDays(new Date(), days);
 
     // Get total counts
-    const [totalUsers, totalLocations, totalWeatherLogs, totalDesigns] = await Promise.all([
+    const [
+      totalUsers,
+      totalAdmins,
+      totalLocations,
+      publicLocations,
+      totalWeatherLogs,
+      totalDesigns,
+      totalFrames,
+      publicFrames,
+    ] = await Promise.all([
       prisma.user.count(),
+      prisma.user.count({ where: { role: 'ADMIN' } }),
       prisma.savedLocation.count(),
+      prisma.savedLocation.count({ where: { isPublic: true } }),
       prisma.weatherLog.count(),
       prisma.kiteDesign.count(),
+      prisma.kiteFrame.count(),
+      prisma.kiteFrame.count({ where: { isPublic: true } }),
     ]);
 
     // Get growth data
     const previousPeriodStart = subMonths(new Date(), 1);
     const [currentPeriodUsers, previousPeriodUsers] = await Promise.all([
-      prisma.user.count({
-        where: { createdAt: { gte: startDate } },
-      }),
+      prisma.user.count({ where: { createdAt: { gte: startDate } } }),
       prisma.user.count({
         where: { 
           createdAt: { 
@@ -46,9 +57,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     const [currentPeriodLocations, previousPeriodLocations] = await Promise.all([
-      prisma.savedLocation.count({
-        where: { createdAt: { gte: startDate } },
-      }),
+      prisma.savedLocation.count({ where: { createdAt: { gte: startDate } } }),
       prisma.savedLocation.count({
         where: { 
           createdAt: { 
@@ -60,9 +69,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     const [currentPeriodDesigns, previousPeriodDesigns] = await Promise.all([
-      prisma.kiteDesign.count({
-        where: { createdAt: { gte: startDate } },
-      }),
+      prisma.kiteDesign.count({ where: { createdAt: { gte: startDate } } }),
       prisma.kiteDesign.count({
         where: { 
           createdAt: { 
@@ -81,13 +88,15 @@ export async function GET(req: NextRequest) {
 
     // Get user growth data (daily)
     const userGrowthData = [];
-    for (let i = 0; i <= Math.min(days, 30); i++) {
+    const daysToShow = Math.min(days, 30);
+    for (let i = daysToShow; i >= 0; i--) {
       const date = subDays(new Date(), i);
+      const nextDate = subDays(new Date(), i - 1);
       const count = await prisma.user.count({
         where: {
           createdAt: {
             gte: date,
-            lt: subDays(date, -1),
+            lt: nextDate,
           },
         },
       });
@@ -96,7 +105,6 @@ export async function GET(req: NextRequest) {
         users: count,
       });
     }
-    userGrowthData.reverse();
 
     // Get activity distribution
     const [locationsCount, weatherCount, designsCount] = await Promise.all([
@@ -112,7 +120,7 @@ export async function GET(req: NextRequest) {
     ];
 
     // Get weather data
-    const weatherData = await prisma.weatherLog.findMany({
+    const weatherLogs = await prisma.weatherLog.findMany({
       where: {
         timestamp: { gte: startDate },
       },
@@ -120,16 +128,31 @@ export async function GET(req: NextRequest) {
       take: 30,
     });
 
-    const weatherChartData = weatherData.map((log) => ({
+    const weatherChartData = weatherLogs.map((log) => ({
       date: format(log.timestamp, 'dd/MM'),
-      windSpeed: log.windSpeed,
-      temperature: log.temperature || 0,
+      windSpeed: Math.round(log.windSpeed),
+      temperature: log.temperature ? Math.round(log.temperature) : 0,
     }));
+
+    // Get design status distribution
+    const [pending, processing, completed, failed] = await Promise.all([
+      prisma.kiteDesign.count({ where: { status: 'PENDING' } }),
+      prisma.kiteDesign.count({ where: { status: 'PROCESSING' } }),
+      prisma.kiteDesign.count({ where: { status: 'COMPLETED' } }),
+      prisma.kiteDesign.count({ where: { status: 'FAILED' } }),
+    ]);
+
+    const designStatusDistribution = [
+      { name: 'Pending', value: pending },
+      { name: 'Processing', value: processing },
+      { name: 'Completed', value: completed },
+      { name: 'Failed', value: failed },
+    ].filter(item => item.value > 0);
 
     // Get design categories
     const designCategories = [
-      { category: 'Kerangka', count: await prisma.kiteDesign.count({ where: { category: 'KERANGKA' } }) },
-      { category: 'Sampul', count: await prisma.kiteDesign.count({ where: { category: 'SAMPUL' } }) },
+      { category: 'Kerangka', count: totalFrames },
+      { category: 'Sampul', count: totalDesigns },
     ];
 
     // Get top users
@@ -171,9 +194,13 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       totalUsers,
+      totalAdmins,
       totalLocations,
+      publicLocations,
       totalWeatherLogs,
       totalDesigns,
+      totalFrames,
+      publicFrames,
       userGrowth: calculateGrowth(currentPeriodUsers, previousPeriodUsers),
       locationGrowth: calculateGrowth(currentPeriodLocations, previousPeriodLocations),
       designGrowth: calculateGrowth(currentPeriodDesigns, previousPeriodDesigns),
@@ -182,6 +209,7 @@ export async function GET(req: NextRequest) {
       activityDistribution,
       weatherData: weatherChartData,
       designCategories,
+      designStatusDistribution,
       topUsers: formattedTopUsers,
     });
   } catch (error) {

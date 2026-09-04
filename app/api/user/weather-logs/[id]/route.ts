@@ -1,4 +1,4 @@
-// app/api/user/designs/[id]/route.ts
+// app/api/user/weather-logs/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,8 +17,11 @@ export async function DELETE(
       );
     }
 
+    // Await the params to get the id
+    const { id } = await params;
+
     const design = await prisma.kiteDesign.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { userId: true },
     });
 
@@ -37,7 +40,7 @@ export async function DELETE(
     }
 
     await prisma.kiteDesign.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ 

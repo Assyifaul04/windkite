@@ -49,20 +49,30 @@ export async function GET() {
     const totalRecords = tableResults.reduce((acc, t) => acc + t.count, 0);
 
     // Health check
-    const health = {
-      status: 'healthy' as const,
-      issues: [] as string[],
-      warnings: [] as string[],
-    };
+    type HealthStatus = 'healthy' | 'warning' | 'critical'; // Define the type
+    let healthStatus: HealthStatus = 'healthy';
+    const issues: string[] = [];
+    const warnings: string[] = [];
 
     if (connectionStatus === 'error') {
-      health.status = 'critical';
-      health.issues.push('Database connection failed');
+      healthStatus = 'critical';
+      issues.push('Database connection failed');
     }
 
     if (latency > 100) {
-      health.warnings.push(`High latency detected: ${latency}ms`);
+      warnings.push(`High latency detected: ${latency}ms`);
     }
+
+    // If there are warnings but not critical, set status to warning
+    if (warnings.length > 0 && healthStatus === 'healthy') {
+      healthStatus = 'warning';
+    }
+
+    const health = {
+      status: healthStatus,
+      issues,
+      warnings,
+    };
 
     return NextResponse.json({
       connection: {

@@ -73,7 +73,7 @@ export async function GET(
   }
 }
 
-// PUT - Update frame
+// PUT - Update frame (partial update allowed)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -87,40 +87,48 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const {
-      name,
-      description,
-      imageUrl,
-      thumbnailUrl,
-      canvasWidth,
-      canvasHeight,
-      isPublic,
-      markerData,
-      clipPathSvg,
-      status,
-    } = body;
+    // Build update data dynamically - only include fields that are provided
+    const updateData: any = {};
 
-    if (!name || !imageUrl) {
+    // Only add fields if they exist in the request body
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
+    if (body.thumbnailUrl !== undefined) updateData.thumbnailUrl = body.thumbnailUrl;
+    if (body.canvasWidth !== undefined) updateData.canvasWidth = body.canvasWidth;
+    if (body.canvasHeight !== undefined) updateData.canvasHeight = body.canvasHeight;
+    if (body.isPublic !== undefined) updateData.isPublic = body.isPublic;
+    if (body.markerData !== undefined) updateData.markerData = body.markerData;
+    if (body.clipPathSvg !== undefined) updateData.clipPathSvg = body.clipPathSvg;
+    if (body.status !== undefined) updateData.status = body.status;
+
+    // If no data to update, return error
+    if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
-        { error: 'Name and imageUrl are required' },
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
+    }
+
+    // For partial updates, we don't require name and imageUrl
+    // Only validate if they are being updated
+    if (body.name !== undefined && !body.name?.trim()) {
+      return NextResponse.json(
+        { error: 'Name cannot be empty' },
+        { status: 400 }
+      );
+    }
+
+    if (body.imageUrl !== undefined && !body.imageUrl) {
+      return NextResponse.json(
+        { error: 'ImageUrl cannot be empty' },
         { status: 400 }
       );
     }
 
     const frame = await prisma.kiteFrame.update({
       where: { id },
-      data: {
-        name,
-        description: description || null,
-        imageUrl,
-        thumbnailUrl: thumbnailUrl || imageUrl,
-        canvasWidth: canvasWidth || 800,
-        canvasHeight: canvasHeight || 600,
-        isPublic: isPublic !== undefined ? isPublic : false,
-        markerData: markerData || [],
-        clipPathSvg: clipPathSvg || null,
-        status: status || undefined,
-      },
+      data: updateData,
       include: {
         _count: {
           select: {

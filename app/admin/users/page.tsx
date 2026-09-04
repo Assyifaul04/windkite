@@ -306,8 +306,8 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                      <DropdownMenuTrigger>
+                        <Button variant="ghost" className="h-8 w-8 p-0" type="button">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

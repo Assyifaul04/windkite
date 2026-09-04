@@ -70,8 +70,14 @@ export default function UserActivityPage() {
     fetchActivities();
   }, [filter]);
 
+  // Fixed: Properly typed filter change handler
+  const handleFilterChange = (value: string | null) => {
+    setFilter(value || 'all');
+  };
+
   const fetchActivities = async () => {
     try {
+      setLoading(true);
       const url = filter === 'all' 
         ? '/api/admin/users/activity'
         : `/api/admin/users/activity?action=${filter}`;
@@ -121,7 +127,10 @@ export default function UserActivityPage() {
         <CardContent>
           <div className="flex flex-wrap gap-4">
             <div className="w-48">
-              <Select value={filter} onValueChange={setFilter}>
+              <Select 
+                value={filter} 
+                onValueChange={handleFilterChange}
+              >
                 <SelectTrigger>
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder="Pilih filter" />
@@ -138,7 +147,9 @@ export default function UserActivityPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" onClick={() => setFilter('all')}>
+            <Button variant="outline" onClick={() => {
+              setFilter('all');
+            }}>
               Reset Filter
             </Button>
           </div>

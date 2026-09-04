@@ -264,6 +264,15 @@ export default function UserDashboardPage() {
     }
   };
 
+  // Fixed: Properly typed Select onChange handlers
+  const handleLocationSelect = (value: string | null) => {
+    setWeatherForm({ ...weatherForm, locationId: value || "" });
+  };
+
+  const handleDesignCategorySelect = (value: string | null) => {
+    setDesignForm({ ...designForm, category: value as "KERANGKA" | "SAMPUL" || "SAMPUL" });
+  };
+
   const getSuitabilityBadge = (suitability: string) => {
     const colors: Record<string, string> = {
       TIDAK_LAYAK: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
@@ -389,9 +398,12 @@ export default function UserDashboardPage() {
               Lokasi Terbaru
             </CardTitle>
             {locations.length > 0 && (
-              <Button variant="ghost" size="sm" asChild className="h-6 sm:h-7 text-xs px-1.5 sm:px-2">
-                <Link href="/user/locations">Lihat semua</Link>
-              </Button>
+              <Link 
+                href="/user/locations" 
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background hover:bg-accent hover:text-accent-foreground h-6 sm:h-7 px-1.5 sm:px-2 text-xs"
+              >
+                Lihat semua
+              </Link>
             )}
           </CardHeader>
           <CardContent className="pt-0">
@@ -426,9 +438,12 @@ export default function UserDashboardPage() {
               Cuaca Terbaru
             </CardTitle>
             {weatherLogs.length > 0 && (
-              <Button variant="ghost" size="sm" asChild className="h-6 sm:h-7 text-xs px-1.5 sm:px-2">
-                <Link href="/user/weather">Lihat semua</Link>
-              </Button>
+              <Link 
+                href="/user/weather" 
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background hover:bg-accent hover:text-accent-foreground h-6 sm:h-7 px-1.5 sm:px-2 text-xs"
+              >
+                Lihat semua
+              </Link>
             )}
           </CardHeader>
           <CardContent className="pt-0">
@@ -465,9 +480,12 @@ export default function UserDashboardPage() {
             Desain Terbaru
           </CardTitle>
           {designs.length > 0 && (
-            <Button variant="ghost" size="sm" asChild className="h-6 sm:h-7 text-xs px-1.5 sm:px-2">
-              <Link href="/user/designs">Lihat semua</Link>
-            </Button>
+            <Link 
+              href="/user/designs" 
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background hover:bg-accent hover:text-accent-foreground h-6 sm:h-7 px-1.5 sm:px-2 text-xs"
+            >
+              Lihat semua
+            </Link>
           )}
         </CardHeader>
         <CardContent className="pt-0">
@@ -516,7 +534,6 @@ export default function UserDashboardPage() {
             <DialogTitle>Tambah Lokasi</DialogTitle>
             <DialogDescription>Tambahkan lokasi lapangan layangan baru</DialogDescription>
           </DialogHeader>
-          {/* ... konten dialog ... */}
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nama Lokasi</Label>
@@ -569,20 +586,19 @@ export default function UserDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Weather Dialog */}
+      {/* Create Weather Dialog - Fixed Select onChange */}
       <Dialog open={isWeatherDialogOpen} onOpenChange={setIsWeatherDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Catat Data Cuaca</DialogTitle>
             <DialogDescription>Tambahkan data cuaca untuk lokasi</DialogDescription>
           </DialogHeader>
-          {/* ... konten dialog ... */}
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="locationId">Lokasi</Label>
               <Select
                 value={weatherForm.locationId}
-                onValueChange={(value) => setWeatherForm({ ...weatherForm, locationId: value })}
+                onValueChange={handleLocationSelect}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih lokasi" />
@@ -644,14 +660,13 @@ export default function UserDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Design Dialog */}
+      {/* Create Design Dialog - Fixed Select onChange */}
       <Dialog open={isDesignDialogOpen} onOpenChange={setIsDesignDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Generate Desain AI</DialogTitle>
             <DialogDescription>Buat desain layangan dengan AI</DialogDescription>
           </DialogHeader>
-          {/* ... konten dialog ... */}
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="prompt">Prompt</Label>
@@ -667,7 +682,7 @@ export default function UserDashboardPage() {
               <Label htmlFor="category">Kategori</Label>
               <Select
                 value={designForm.category}
-                onValueChange={(value) => setDesignForm({ ...designForm, category: value as any })}
+                onValueChange={handleDesignCategorySelect}
               >
                 <SelectTrigger>
                   <SelectValue />

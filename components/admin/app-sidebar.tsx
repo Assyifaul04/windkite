@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 import { NavMain } from "@/components/admin/nav-main";
 import { NavProjects } from "@/components/admin/nav-projects";
@@ -29,7 +30,6 @@ import {
   CompassIcon,
   WindIcon,
   DatabaseIcon,
-  FrameIcon,
   PaintBrushIcon,
   LayoutIcon,
   ImagesIcon,
@@ -242,28 +242,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<a href="/admin/dashboard" />}>
-              <div className="flex items-center justify-center w-full overflow-hidden">
-                {/* Logo untuk Light Mode */}
-                <Image
-                  src="/image/logo-hitam.png"
-                  alt="WindKite Logo Light"
-                  width={130}
-                  height={35}
-                  priority
-                  className="h-7 w-auto object-contain dark:hidden block"
-                />
-                {/* Logo untuk Dark Mode */}
-                <Image
-                  src="/image/logo-putih.png"
-                  alt="WindKite Logo Dark"
-                  width={130}
-                  height={35}
-                  priority
-                  className="h-7 w-auto object-contain hidden dark:block"
-                />
-              </div>
-            </SidebarMenuButton>
+            {/* Fixed: Removed asChild prop and used direct Link with className */}
+            <Link href="/admin/dashboard" className="block w-full">
+              <SidebarMenuButton size="lg" className="w-full">
+                <div className="flex items-center justify-center w-full overflow-hidden">
+                  {/* Logo untuk Light Mode */}
+                  <Image
+                    src="/image/logo-hitam.png"
+                    alt="WindKite Logo Light"
+                    width={130}
+                    height={35}
+                    priority
+                    className="h-7 w-auto object-contain dark:hidden block"
+                  />
+                  {/* Logo untuk Dark Mode */}
+                  <Image
+                    src="/image/logo-putih.png"
+                    alt="WindKite Logo Dark"
+                    width={130}
+                    height={35}
+                    priority
+                    className="h-7 w-auto object-contain hidden dark:block"
+                  />
+                </div>
+              </SidebarMenuButton>
+            </Link>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

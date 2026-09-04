@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Copy,
   RefreshCw,
+  ImageOff,
 } from 'lucide-react';
 import {
   Card,
@@ -97,6 +98,7 @@ export default function KiteFramesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedFrame, setSelectedFrame] = useState<KiteFrame | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchFrames();
@@ -112,6 +114,8 @@ export default function KiteFramesPage() {
       
       const data = await response.json();
       setFrames(data);
+      // Reset image errors for new data
+      setImageErrors({});
     } catch (error) {
       console.error('Error fetching frames:', error);
       toast.error('Gagal memuat data frame');
@@ -153,6 +157,10 @@ export default function KiteFramesPage() {
       console.error('Error updating status:', error);
       toast.error('Gagal mengubah status');
     }
+  };
+
+  const handleImageError = (frameId: string) => {
+    setImageErrors(prev => ({ ...prev, [frameId]: true }));
   };
 
   if (loading) {
@@ -207,7 +215,10 @@ export default function KiteFramesPage() {
               />
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select 
+              value={statusFilter} 
+              onValueChange={(value) => setStatusFilter(value || 'all')} // Fixed: handle null
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
@@ -253,146 +264,153 @@ export default function KiteFramesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                frames.map((frame) => (
-                  <TableRow key={frame.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-                          {frame.thumbnailUrl || frame.imageUrl ? (
-                            <Image
-                              src={frame.thumbnailUrl || frame.imageUrl}
-                              alt={frame.name}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <FrameIcon className="h-6 w-6 text-slate-400" />
-                            </div>
-                          )}
+                frames.map((frame) => {
+                  const hasImageError = imageErrors[frame.id];
+                  const imageSrc = frame.thumbnailUrl || frame.imageUrl;
+                  
+                  return (
+                    <TableRow key={frame.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0">
+                            {imageSrc && !hasImageError ? (
+                              <Image
+                                src={imageSrc}
+                                alt={frame.name}
+                                fill
+                                className="object-cover"
+                                onError={() => handleImageError(frame.id)}
+                                unoptimized={imageSrc.startsWith('data:')}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ImageOff className="h-5 w-5 text-slate-400" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium">{frame.name}</p>
+                            <p className="text-sm text-muted-foreground truncate max-w-[200px]">
+                              {frame.description || 'No description'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{frame.name}</p>
-                          <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                            {frame.description || 'No description'}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {frame.canvasWidth && frame.canvasHeight ? (
-                        `${frame.canvasWidth} × ${frame.canvasHeight}`
-                      ) : (
-                        <span className="text-muted-foreground">Not set</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusConfig[frame.status].color}>
-                        {statusConfig[frame.status].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <span className="font-medium">{frame._count.designs}</span> designs
-                        <span className="text-muted-foreground ml-2">
-                          • {frame.viewCount} views
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant={frame.isPublic ? 'default' : 'secondary'}>
-                          {frame.isPublic ? 'Public' : 'Private'}
-                        </Badge>
-                        {frame.clipPathSvg && (
-                          <Badge variant="outline" className="flex items-center gap-1">
-                            <FrameIcon className="h-3 w-3" />
-                            Clip Path
-                          </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {frame.canvasWidth && frame.canvasHeight ? (
+                          `${frame.canvasWidth} × ${frame.canvasHeight}`
+                        ) : (
+                          <span className="text-muted-foreground">Not set</span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(frame.createdAt), {
-                        addSuffix: true,
-                        locale: id,
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                            Actions
-                          </div>
-                          
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/designs/frames/${frame.id}`}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Link>
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/designs/frames/editor?id=${frame.id}`}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Frame
-                            </Link>
-                          </DropdownMenuItem>
-                          
-                          <DropdownMenuItem asChild>
-                            <Link href={`/admin/designs/frames/editor?copy=${frame.id}`}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </Link>
-                          </DropdownMenuItem>
-
-                          <div className="h-px bg-border my-1" />
-
-                          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
-                            Change Status
-                          </div>
-                          
-                          {frame.status !== 'DRAFT' && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(frame.id, 'DRAFT')}>
-                              <div className="w-2 h-2 rounded-full bg-gray-500 mr-2" />
-                              Set Draft
-                            </DropdownMenuItem>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={statusConfig[frame.status].color}>
+                          {statusConfig[frame.status].label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <span className="font-medium">{frame._count.designs}</span> designs
+                          <span className="text-muted-foreground ml-2">
+                            • {frame.viewCount} views
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant={frame.isPublic ? 'default' : 'secondary'}>
+                            {frame.isPublic ? 'Public' : 'Private'}
+                          </Badge>
+                          {frame.clipPathSvg && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <FrameIcon className="h-3 w-3" />
+                              Clip Path
+                            </Badge>
                           )}
-                          {frame.status !== 'PUBLISHED' && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(frame.id, 'PUBLISHED')}>
-                              <div className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-                              Set Published
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(frame.createdAt), {
+                          addSuffix: true,
+                          locale: id,
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                              Actions
+                            </div>
+                            
+                            <DropdownMenuItem>
+                              <Link href={`/admin/designs/frames/${frame.id}`} className="flex items-center w-full">
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </Link>
                             </DropdownMenuItem>
-                          )}
-                          {frame.status !== 'ARCHIVED' && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(frame.id, 'ARCHIVED')}>
-                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2" />
-                              Set Archived
+                            
+                            <DropdownMenuItem>
+                              <Link href={`/admin/designs/frames/editor?id=${frame.id}`} className="flex items-center w-full">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Frame
+                              </Link>
                             </DropdownMenuItem>
-                          )}
+                            
+                            <DropdownMenuItem>
+                              <Link href={`/admin/designs/frames/editor?copy=${frame.id}`} className="flex items-center w-full">
+                                <Copy className="mr-2 h-4 w-4" />
+                                Duplicate
+                              </Link>
+                            </DropdownMenuItem>
 
-                          <div className="h-px bg-border my-1" />
+                            <div className="h-px bg-border my-1" />
 
-                          <DropdownMenuItem
-                            className="text-red-600 hover:text-red-700 focus:text-red-700"
-                            onClick={() => {
-                              setSelectedFrame(frame);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Frame
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+                              Change Status
+                            </div>
+                            
+                            {frame.status !== 'DRAFT' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(frame.id, 'DRAFT')}>
+                                <div className="w-2 h-2 rounded-full bg-gray-500 mr-2" />
+                                Set Draft
+                              </DropdownMenuItem>
+                            )}
+                            {frame.status !== 'PUBLISHED' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(frame.id, 'PUBLISHED')}>
+                                <div className="w-2 h-2 rounded-full bg-green-500 mr-2" />
+                                Set Published
+                              </DropdownMenuItem>
+                            )}
+                            {frame.status !== 'ARCHIVED' && (
+                              <DropdownMenuItem onClick={() => handleStatusChange(frame.id, 'ARCHIVED')}>
+                                <div className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                                Set Archived
+                              </DropdownMenuItem>
+                            )}
+
+                            <div className="h-px bg-border my-1" />
+
+                            <DropdownMenuItem
+                              className="text-red-600 hover:text-red-700 focus:text-red-700"
+                              onClick={() => {
+                                setSelectedFrame(frame);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Frame
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

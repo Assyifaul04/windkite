@@ -108,6 +108,15 @@ export default function WeatherAnalyticsPage() {
     }
   };
 
+  // Fixed: Properly typed handlers for Select components
+  const handlePeriodChange = (value: string | null) => {
+    setPeriod(value || '30d');
+  };
+
+  const handleLocationChange = (value: string | null) => {
+    setLocationId(value || 'all');
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -139,7 +148,7 @@ export default function WeatherAnalyticsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={setPeriod}>
+          <Select value={period} onValueChange={handlePeriodChange}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Periode" />
             </SelectTrigger>
@@ -149,7 +158,7 @@ export default function WeatherAnalyticsPage() {
               <SelectItem value="90d">90 Hari</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={locationId} onValueChange={setLocationId}>
+          <Select value={locationId} onValueChange={handleLocationChange}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Pilih lokasi" />
             </SelectTrigger>

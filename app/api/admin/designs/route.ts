@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || 'all';
+    const frameId = searchParams.get('frameId') || '';
 
     const skip = (page - 1) * limit;
 
@@ -23,6 +24,10 @@ export async function GET(request: NextRequest) {
     
     if (status !== 'all') {
       where.status = status;
+    }
+
+    if (frameId) {
+      where.frameId = frameId;
     }
 
     if (search) {
@@ -82,7 +87,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching designs:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch designs' },
+      { error: 'Failed to fetch designs', details: String(error) },
       { status: 500 }
     );
   }

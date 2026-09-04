@@ -26,12 +26,17 @@ interface WindData {
   count: number;
 }
 
+interface Location {
+  id: string;
+  name: string;
+}
+
 export default function WindRosePage() {
   const [data, setData] = useState<WindData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('30d');
-  const [locationId, setLocationId] = useState('all');
-  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [period, setPeriod] = useState<string>('30d');
+  const [locationId, setLocationId] = useState<string>('all');
+  const [locations, setLocations] = useState<Location[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -79,6 +84,15 @@ export default function WindRosePage() {
       drawWindRose();
     }
   }, [data, loading]);
+
+  // Fixed: Properly typed onChange handlers
+  const handlePeriodChange = (value: string | null) => {
+    setPeriod(value || '30d');
+  };
+
+  const handleLocationChange = (value: string | null) => {
+    setLocationId(value || 'all');
+  };
 
   const drawWindRose = () => {
     const canvas = canvasRef.current;
@@ -214,6 +228,22 @@ export default function WindRosePage() {
     ctx.fillText('Arah Angin', centerX, height - 5);
   };
 
+  // Handle download with proper type checking
+  const handleDownload = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      try {
+        const link = document.createElement('a');
+        link.download = 'wind-rose.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (error) {
+        console.error('Error downloading image:', error);
+        toast.error('Gagal mengunduh gambar');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -233,8 +263,12 @@ export default function WindRosePage() {
             Visualisasi arah dan kecepatan angin
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={period} onValueChange={setPeriod}>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Fixed: Added proper onChange handlers */}
+          <Select 
+            value={period} 
+            onValueChange={handlePeriodChange}
+          >
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Periode" />
             </SelectTrigger>
@@ -244,7 +278,11 @@ export default function WindRosePage() {
               <SelectItem value="90d">90 Hari</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={locationId} onValueChange={setLocationId}>
+          
+          <Select 
+            value={locationId} 
+            onValueChange={handleLocationChange}
+          >
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Pilih lokasi" />
             </SelectTrigger>
@@ -257,19 +295,13 @@ export default function WindRosePage() {
               ))}
             </SelectContent>
           </Select>
+          
           <Button variant="outline" onClick={fetchWindRose}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button variant="outline" onClick={() => {
-            const canvas = canvasRef.current;
-            if (canvas) {
-              const link = document.createElement('a');
-              link.download = 'wind-rose.png';
-              link.href = canvas.toDataURL('image/png');
-              link.click();
-            }
-          }}>
+          
+          <Button variant="outline" onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
             Download
           </Button>
@@ -315,7 +347,9 @@ export default function WindRosePage() {
               <div className="flex items-center gap-2">
                 <Compass className="h-4 w-4 text-emerald-500" />
                 <span className="text-2xl font-bold">
-                  {data.reduce((a, b) => a.count > b.count ? a : b).direction}°
+                  {data.length > 0 
+                    ? `${data.reduce((a, b) => a.count > b.count ? a : b).direction}°`
+                    : 'N/A'}
                 </span>
               </div>
             </CardContent>
@@ -326,8 +360,10 @@ export default function WindRosePage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Math.round(data.reduce((acc, d) => acc + d.speed * d.count, 0) / 
-                  data.reduce((acc, d) => acc + d.count, 0))} km/h
+                {data.length > 0
+                  ? Math.round(data.reduce((acc, d) => acc + d.speed * d.count, 0) / 
+                      data.reduce((acc, d) => acc + d.count, 0))
+                  : 0} km/h
               </div>
             </CardContent>
           </Card>
@@ -337,7 +373,7 @@ export default function WindRosePage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Math.max(...data.map(d => d.speed))} km/h
+                {data.length > 0 ? Math.max(...data.map(d => d.speed)) : 0} km/h
               </div>
             </CardContent>
           </Card>

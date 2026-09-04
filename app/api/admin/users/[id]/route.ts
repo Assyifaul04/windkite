@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,7 @@ export async function PATCH(
     const { role } = await req.json();
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: { role },
     });
 
@@ -33,7 +33,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -43,7 +43,7 @@ export async function DELETE(
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       select: { role: true },
     });
 
@@ -56,7 +56,7 @@ export async function DELETE(
 
     // Delete user with cascade
     await prisma.user.delete({
-      where: { id: params.id },
+      where: { id: (await params).id },
     });
 
     return NextResponse.json({ message: 'User deleted successfully' });

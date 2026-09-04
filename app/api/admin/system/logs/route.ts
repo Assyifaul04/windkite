@@ -104,7 +104,7 @@ const generateSystemLogs = async () => {
     });
   });
 
-  // Get recent designs
+  // Get recent designs - FIXED: removed 'category' field
   const recentDesigns = await prisma.kiteDesign.findMany({
     take: 5,
     orderBy: { createdAt: 'desc' },
@@ -122,15 +122,17 @@ const generateSystemLogs = async () => {
     logs.push({
       id: `design-${design.id}`,
       level: 'info',
-      message: `Desain AI baru dibuat: ${design.category}`,
+      message: `Desain AI baru dibuat: ${design.title || 'Untitled'}`,
       source: 'api',
       userId: design.userId,
       userName: design.user?.name || 'User',
       timestamp: design.createdAt.toISOString(),
       metadata: {
         designId: design.id,
-        category: design.category,
+        frameId: design.frameId,
+        status: design.status,
         isPublic: design.isPublic,
+        // Remove 'category' field since it doesn't exist in schema
       },
     });
   });

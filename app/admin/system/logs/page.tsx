@@ -158,6 +158,15 @@ export default function SystemLogsPage() {
     toast.success('Log berhasil diekspor');
   };
 
+  // Fixed: Properly typed filter handlers
+  const handleLevelFilterChange = (value: string | null) => {
+    setFilterLevel(value || 'all');
+  };
+
+  const handleSourceFilterChange = (value: string | null) => {
+    setFilterSource(value || 'all');
+  };
+
   const getLevelBadge = (level: string) => {
     const styles: Record<string, string> = {
       info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
@@ -165,7 +174,7 @@ export default function SystemLogsPage() {
       error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
       debug: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
     };
-    const icons: Record<string, JSX.Element> = {
+    const icons: Record<string, React.ReactElement> = {
       info: <Info className="h-3 w-3" />,
       warning: <AlertTriangle className="h-3 w-3" />,
       error: <AlertCircle className="h-3 w-3" />,
@@ -180,7 +189,7 @@ export default function SystemLogsPage() {
   };
 
   const getSourceIcon = (source: string) => {
-    const icons: Record<string, JSX.Element> = {
+    const icons: Record<string, React.ReactElement> = {
       system: <Server className="h-3 w-3" />,
       database: <Database className="h-3 w-3" />,
       auth: <User className="h-3 w-3" />,
@@ -241,7 +250,7 @@ export default function SystemLogsPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Fixed Select onChange handlers */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -252,7 +261,10 @@ export default function SystemLogsPage() {
             className="pl-9"
           />
         </div>
-        <Select value={filterLevel} onValueChange={setFilterLevel}>
+        <Select 
+          value={filterLevel} 
+          onValueChange={handleLevelFilterChange}
+        >
           <SelectTrigger className="w-40">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Level" />
@@ -266,7 +278,10 @@ export default function SystemLogsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterSource} onValueChange={setFilterSource}>
+        <Select 
+          value={filterSource} 
+          onValueChange={handleSourceFilterChange}
+        >
           <SelectTrigger className="w-40">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Source" />
@@ -351,8 +366,8 @@ export default function SystemLogsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
+                          <DropdownMenuTrigger>
+                            <Button variant="ghost" className="h-8 w-8 p-0" type="button">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

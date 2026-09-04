@@ -158,6 +158,11 @@ export default function WeatherLogsPage() {
     toast.success('Data cuaca berhasil diekspor');
   };
 
+  // Fixed: Properly typed location filter handler
+  const handleLocationFilterChange = (value: string | null) => {
+    setSelectedLocation(value || 'all');
+  };
+
   const getKiteSuitabilityBadge = (suitability: string) => {
     const colors: Record<string, string> = {
       TIDAK_LAYAK: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
@@ -265,7 +270,7 @@ export default function WeatherLogsPage() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Fixed Select onChange */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -276,7 +281,10 @@ export default function WeatherLogsPage() {
             className="pl-9"
           />
         </div>
-        <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+        <Select 
+          value={selectedLocation} 
+          onValueChange={handleLocationFilterChange}
+        >
           <SelectTrigger className="w-48">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Filter lokasi" />
@@ -296,7 +304,7 @@ export default function WeatherLogsPage() {
         </Button>
       </div>
 
-      {/* Weather Logs Table */}
+      {/* Weather Logs Table - Fixed asChild removed */}
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
@@ -383,8 +391,8 @@ export default function WeatherLogsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                      <DropdownMenuTrigger>
+                        <Button variant="ghost" className="h-8 w-8 p-0" type="button">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

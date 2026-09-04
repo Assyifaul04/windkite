@@ -1,29 +1,23 @@
-// app/admin/designs/gallery/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Add this import
 import {
   ImagesIcon,
   Heart,
   Eye,
-  Download,
-  Filter,
   Search,
   RefreshCw,
 } from 'lucide-react';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import Image from 'next/image';
-import Link from 'next/link';
 
 interface GalleryDesign {
   id: string;
@@ -42,6 +36,7 @@ interface GalleryDesign {
 }
 
 export default function DesignGalleryPage() {
+  const router = useRouter(); // Add this
   const [designs, setDesigns] = useState<GalleryDesign[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -66,6 +61,10 @@ export default function DesignGalleryPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDesign = (designId: string) => {
+    router.push(`/design/${designId}`);
   };
 
   return (
@@ -94,7 +93,7 @@ export default function DesignGalleryPage() {
         </div>
       </div>
 
-      {/* Gallery Grid */}
+      {/* Gallery Grid - same as before but with updated button */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
@@ -125,11 +124,13 @@ export default function DesignGalleryPage() {
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <Button variant="secondary" size="sm" asChild>
-                    <Link href={`/design/${design.id}`}>
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Link>
+                  <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => handleViewDesign(design.id)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View
                   </Button>
                 </div>
                 <Badge className="absolute top-2 left-2">

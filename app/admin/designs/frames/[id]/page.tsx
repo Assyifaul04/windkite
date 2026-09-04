@@ -1,18 +1,18 @@
 // app/admin/designs/frames/[id]/page.tsx
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ArrowLeft,
   Edit,
@@ -36,12 +36,12 @@ import {
   AlertCircle,
   Check,
   X,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { format, formatDistanceToNow } from 'date-fns';
-import { id } from 'date-fns/locale';
-import Image from 'next/image';
-import Link from 'next/link';
+} from "lucide-react";
+import { toast } from "sonner";
+import { format, formatDistanceToNow } from "date-fns";
+import { id } from "date-fns/locale";
+import Image from "next/image";
+import Link from "next/link";
 
 interface KiteFrame {
   id: string;
@@ -53,7 +53,7 @@ interface KiteFrame {
   canvasHeight: number | null;
   markerData: any[];
   clipPathSvg: string | null;
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   isPublic: boolean;
   viewCount: number;
   useCount: number;
@@ -83,28 +83,33 @@ interface KiteFrame {
 }
 
 const statusConfig = {
-  DRAFT: { 
-    label: 'Draft', 
-    color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-    badgeColor: 'bg-gray-500',
+  DRAFT: {
+    label: "Draft",
+    color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+    badgeColor: "bg-gray-500",
     icon: Clock,
-    description: 'Frame masih dalam tahap pengerjaan'
+    description: "Frame masih dalam tahap pengerjaan",
   },
-  PUBLISHED: { 
-    label: 'Published', 
-    color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-    badgeColor: 'bg-green-500',
+  PUBLISHED: {
+    label: "Published",
+    color:
+      "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+    badgeColor: "bg-green-500",
     icon: CheckCircle,
-    description: 'Frame sudah dipublikasikan dan dapat digunakan'
+    description: "Frame sudah dipublikasikan dan dapat digunakan",
   },
-  ARCHIVED: { 
-    label: 'Archived', 
-    color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    badgeColor: 'bg-red-500',
+  ARCHIVED: {
+    label: "Archived",
+    color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+    badgeColor: "bg-red-500",
     icon: Archive,
-    description: 'Frame sudah diarsipkan dan tidak dapat digunakan'
+    description: "Frame sudah diarsipkan dan tidak dapat digunakan",
   },
 };
+
+// Fallback ratio used only when the frame has no canvasWidth/canvasHeight
+// saved yet (very old/legacy records).
+const DEFAULT_ASPECT_RATIO = "16 / 9";
 
 export default function KiteFrameDetailPage() {
   const params = useParams();
@@ -115,6 +120,7 @@ export default function KiteFrameDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -125,22 +131,23 @@ export default function KiteFrameDetailPage() {
   const fetchFrame = async (id: string) => {
     try {
       setLoading(true);
+      setImageError(false);
       const response = await fetch(`/api/admin/frames/${id}`);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
-          toast.error('Frame tidak ditemukan');
-          router.push('/admin/designs/frames');
+          toast.error("Frame tidak ditemukan");
+          router.push("/admin/designs/frames");
           return;
         }
-        throw new Error('Failed to fetch frame');
+        throw new Error("Failed to fetch frame");
       }
-      
+
       const data = await response.json();
       setFrame(data);
     } catch (error) {
-      console.error('Error fetching frame:', error);
-      toast.error('Gagal memuat data frame');
+      console.error("Error fetching frame:", error);
+      toast.error("Gagal memuat data frame");
     } finally {
       setLoading(false);
     }
@@ -148,51 +155,61 @@ export default function KiteFrameDetailPage() {
 
   const handleDelete = async () => {
     if (!frame) return;
-    
-    if (!confirm(`Apakah Anda yakin ingin menghapus frame "${frame.name}"?`)) return;
-    
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus frame "${frame.name}"?`))
+      return;
+
     try {
       setIsDeleting(true);
       const response = await fetch(`/api/admin/frames/${frame.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to delete frame');
+        throw new Error(error.error || "Failed to delete frame");
       }
-      
-      toast.success('Frame berhasil dihapus');
-      router.push('/admin/designs/frames');
+
+      toast.success("Frame berhasil dihapus");
+      router.push("/admin/designs/frames");
     } catch (error) {
-      console.error('Error deleting frame:', error);
-      toast.error(error instanceof Error ? error.message : 'Gagal menghapus frame');
+      console.error("Error deleting frame:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Gagal menghapus frame",
+      );
     } finally {
       setIsDeleting(false);
     }
   };
 
+  // app/admin/designs/frames/[id]/page.tsx - Perbaiki handleStatusChange
   const handleStatusChange = async (status: string) => {
     if (!frame) return;
-    
+
     try {
       setIsUpdatingStatus(true);
+
+      // Gunakan PATCH untuk partial update
       const response = await fetch(`/api/admin/frames/${frame.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH", // Ganti dari PUT ke PATCH
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to update status');
+        throw new Error(error.error || "Failed to update status");
       }
-      
-      toast.success(`Status berhasil diubah menjadi ${statusConfig[status as keyof typeof statusConfig].label}`);
+
+      toast.success(
+        `Status berhasil diubah menjadi ${statusConfig[status as keyof typeof statusConfig].label}`,
+      );
       await fetchFrame(frame.id);
     } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error(error instanceof Error ? error.message : 'Gagal mengubah status');
+      console.error("Error updating status:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Gagal mengubah status",
+      );
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -201,7 +218,7 @@ export default function KiteFrameDetailPage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success('URL copied to clipboard');
+    toast.success("URL copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -240,8 +257,8 @@ export default function KiteFrameDetailPage() {
           <p className="text-muted-foreground mt-2">
             Frame yang Anda cari tidak ada atau telah dihapus dari sistem.
           </p>
-          <Button 
-            onClick={() => router.push('/admin/designs/frames')} 
+          <Button
+            onClick={() => router.push("/admin/designs/frames")}
             className="mt-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -256,31 +273,44 @@ export default function KiteFrameDetailPage() {
   const designCount = frame._count?.designs || frame.designs?.length || 0;
   const hasMarkers = frame.markerData && frame.markerData.length > 0;
   const hasClipPath = frame.clipPathSvg && frame.clipPathSvg.length > 0;
+  const hasCanvasSize = !!(frame.canvasWidth && frame.canvasHeight);
+
+  // FIX: previously this preview box was hard-locked to a 16:9
+  // "aspect-video" ratio while the clip path / markers are computed in
+  // frame.canvasWidth x frame.canvasHeight space. When a frame's real
+  // ratio wasn't 16:9, the image and the marker overlay each did their own
+  // independent "contain" fit against different box ratios, so the two
+  // could visually drift apart. Sizing the box to the frame's own ratio
+  // keeps image and overlay perfectly in sync, and matches what admins see
+  // in the editor.
+  const previewAspectRatio = hasCanvasSize
+    ? `${frame.canvasWidth} / ${frame.canvasHeight}`
+    : DEFAULT_ASPECT_RATIO;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-wrap items-start gap-4">
-        <Button 
-          variant="outline" 
-          size="icon" 
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => router.back()}
           className="shrink-0"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        
+
         <div className="flex-1 min-w-[200px]">
           <h1 className="text-2xl font-bold">{frame.name}</h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
             <span className="flex items-center gap-1">
               <Users className="h-3 w-3" />
-              {frame.user?.name || 'Unknown'}
+              {frame.user?.name || "Unknown"}
             </span>
             <span className="text-muted-foreground/30">•</span>
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {format(new Date(frame.createdAt), 'PPP', { locale: id })}
+              {format(new Date(frame.createdAt), "PPP", { locale: id })}
             </span>
             <span className="text-muted-foreground/30">•</span>
             <Badge className={statusConfig[frame.status].color}>
@@ -288,7 +318,10 @@ export default function KiteFrameDetailPage() {
               {statusConfig[frame.status].label}
             </Badge>
             {frame.isPublic && (
-              <Badge variant="default" className="bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400">
+              <Badge
+                variant="default"
+                className="bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400"
+              >
                 <Check className="h-3 w-3 mr-1" />
                 Public
               </Badge>
@@ -315,9 +348,9 @@ export default function KiteFrameDetailPage() {
               Duplicate
             </Button>
           </Link>
-          <Button 
-            variant="destructive" 
-            size="sm" 
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={handleDelete}
             disabled={isDeleting}
           >
@@ -336,7 +369,10 @@ export default function KiteFrameDetailPage() {
         <div className="flex items-center gap-3 text-sm">
           <Info className="h-4 w-4 text-muted-foreground" />
           <span className="text-muted-foreground">
-            Status: <span className="font-medium text-foreground">{statusConfig[frame.status].label}</span>
+            Status:{" "}
+            <span className="font-medium text-foreground">
+              {statusConfig[frame.status].label}
+            </span>
           </span>
           <span className="text-muted-foreground/30">•</span>
           <span className="text-muted-foreground">
@@ -345,9 +381,25 @@ export default function KiteFrameDetailPage() {
           {hasClipPath && (
             <>
               <span className="text-muted-foreground/30">•</span>
-              <Badge variant="default" className="bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+              <Badge
+                variant="default"
+                className="bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400"
+              >
                 <FrameIcon className="h-3 w-3 mr-1" />
                 Clip Path Ready
+              </Badge>
+            </>
+          )}
+          {!hasCanvasSize && (
+            <>
+              <span className="text-muted-foreground/30">•</span>
+              <Badge
+                variant="outline"
+                className="text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-800"
+              >
+                <AlertCircle className="h-3 w-3 mr-1" />
+                No canvas size saved — edit &amp; re-save to fix marker
+                alignment
               </Badge>
             </>
           )}
@@ -368,24 +420,27 @@ export default function KiteFrameDetailPage() {
                 </CardTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {frame.canvasWidth || '?'} × {frame.canvasHeight || '?'}
+                    {frame.canvasWidth || "?"} × {frame.canvasHeight || "?"}
                   </Badge>
                   {hasMarkers && (
                     <Button
-                      variant={showClipPath ? 'default' : 'outline'}
+                      variant={showClipPath ? "default" : "outline"}
                       size="sm"
                       className="h-7 px-2 text-xs"
                       onClick={() => setShowClipPath(!showClipPath)}
                     >
-                      {showClipPath ? 'Hide' : 'Show'} Clip Path
+                      {showClipPath ? "Hide" : "Show"} Clip Path
                     </Button>
                   )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="relative aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden m-4">
-                {frame.imageUrl ? (
+              <div
+                className="relative bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden m-4"
+                style={{ aspectRatio: previewAspectRatio }}
+              >
+                {frame.imageUrl && !imageError ? (
                   <>
                     <Image
                       src={frame.imageUrl}
@@ -394,25 +449,9 @@ export default function KiteFrameDetailPage() {
                       className="object-contain"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        // Show fallback
-                        const parent = target.parentElement;
-                        if (parent) {
-                          const fallback = document.createElement('div');
-                          fallback.className = 'flex items-center justify-center h-full';
-                          fallback.innerHTML = `
-                            <div class="text-center">
-                              <div class="w-12 h-12 text-muted-foreground mx-auto mb-2">${'<svg ...>'} </div>
-                              <p class="text-muted-foreground">Image not available</p>
-                            </div>
-                          `;
-                          parent.appendChild(fallback);
-                        }
-                      }}
+                      onError={() => setImageError(true)}
                     />
-                    
+
                     {/* Clip Path Overlay */}
                     {showClipPath && hasClipPath && hasMarkers && (
                       <svg
@@ -421,7 +460,7 @@ export default function KiteFrameDetailPage() {
                         preserveAspectRatio="xMidYMid meet"
                       >
                         <path
-                          d={frame.clipPathSvg}
+                          d={frame.clipPathSvg || ""}
                           fill="rgba(59, 130, 246, 0.15)"
                           stroke="rgba(59, 130, 246, 0.6)"
                           strokeWidth="3"
@@ -455,18 +494,28 @@ export default function KiteFrameDetailPage() {
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                       <ImageIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground text-sm">No image uploaded</p>
+                      <p className="text-muted-foreground text-sm">
+                        {imageError
+                          ? "Image not available"
+                          : "No image uploaded"}
+                      </p>
                     </div>
                   </div>
                 )}
 
                 {/* Info overlay */}
                 <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
-                  <Badge variant="secondary" className="text-xs bg-black/70 text-white border-none">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs bg-black/70 text-white border-none"
+                  >
                     {frame.markerData?.length || 0} markers
                   </Badge>
                   {hasClipPath && (
-                    <Badge variant="default" className="text-xs bg-blue-500/90 text-white border-none">
+                    <Badge
+                      variant="default"
+                      className="text-xs bg-blue-500/90 text-white border-none"
+                    >
                       <FrameIcon className="h-3 w-3 mr-1" />
                       Clip path
                     </Badge>
@@ -490,12 +539,12 @@ export default function KiteFrameDetailPage() {
                     {copied ? (
                       <Check className="h-3 w-3 text-green-500" />
                     ) : (
-                      'Copy'
+                      "Copy"
                     )}
                   </Button>
-                  <a 
-                    href={frame.imageUrl} 
-                    target="_blank" 
+                  <a
+                    href={frame.imageUrl}
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                   >
@@ -516,7 +565,9 @@ export default function KiteFrameDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{frame.description}</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {frame.description}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -545,7 +596,7 @@ export default function KiteFrameDetailPage() {
                         {design.coverImageUrl ? (
                           <Image
                             src={design.coverImageUrl}
-                            alt={design.title || 'Design'}
+                            alt={design.title || "Design"}
                             fill
                             className="object-cover"
                           />
@@ -557,14 +608,19 @@ export default function KiteFrameDetailPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                          {design.title || 'Untitled Design'}
+                          {design.title || "Untitled Design"}
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline" className="text-[10px]">
                             {design.status}
                           </Badge>
                           {design.isPublic && (
-                            <Badge variant="default" className="text-[10px] bg-green-500/10 text-green-600">Public</Badge>
+                            <Badge
+                              variant="default"
+                              className="text-[10px] bg-green-500/10 text-green-600"
+                            >
+                              Public
+                            </Badge>
                           )}
                         </div>
                       </div>
@@ -615,7 +671,9 @@ export default function KiteFrameDetailPage() {
                   <FrameIcon className="h-4 w-4 text-muted-foreground" />
                   Markers
                 </div>
-                <span className="font-medium">{frame.markerData?.length || 0}</span>
+                <span className="font-medium">
+                  {frame.markerData?.length || 0}
+                </span>
               </div>
               <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
@@ -624,12 +682,16 @@ export default function KiteFrameDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={frame.user?.image || ''} />
+                    {frame.user?.image && (
+                      <AvatarImage src={frame.user.image} />
+                    )}
                     <AvatarFallback className="text-xs">
-                      {frame.user?.name?.charAt(0).toUpperCase() || 'U'}
+                      {frame.user?.name?.charAt(0).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm">{frame.user?.name || 'Unknown'}</span>
+                  <span className="text-sm">
+                    {frame.user?.name || "Unknown"}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
@@ -638,7 +700,10 @@ export default function KiteFrameDetailPage() {
                   Created
                 </div>
                 <span className="text-sm">
-                  {formatDistanceToNow(new Date(frame.createdAt), { addSuffix: true, locale: id })}
+                  {formatDistanceToNow(new Date(frame.createdAt), {
+                    addSuffix: true,
+                    locale: id,
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
@@ -647,7 +712,10 @@ export default function KiteFrameDetailPage() {
                   Updated
                 </div>
                 <span className="text-sm">
-                  {formatDistanceToNow(new Date(frame.updatedAt), { addSuffix: true, locale: id })}
+                  {formatDistanceToNow(new Date(frame.updatedAt), {
+                    addSuffix: true,
+                    locale: id,
+                  })}
                 </span>
               </div>
             </CardContent>
@@ -668,7 +736,7 @@ export default function KiteFrameDetailPage() {
                   Edit Frame
                 </Button>
               </Link>
-              
+
               <Link href={`/admin/designs/frames/editor?copy=${frame.id}`}>
                 <Button variant="outline" className="w-full">
                   <Copy className="h-4 w-4 mr-2" />
@@ -677,7 +745,12 @@ export default function KiteFrameDetailPage() {
               </Link>
 
               {frame.imageUrl && (
-                <a href={frame.imageUrl} download target="_blank">
+                <a
+                  href={frame.imageUrl}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <Button variant="outline" className="w-full">
                     <Download className="h-4 w-4 mr-2" />
                     Download Image
@@ -688,12 +761,14 @@ export default function KiteFrameDetailPage() {
               <div className="border-t border-slate-200 dark:border-slate-700 my-3" />
 
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Change Status</p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Change Status
+                </p>
                 <div className="grid grid-cols-3 gap-1">
                   {Object.entries(statusConfig).map(([key, config]) => (
                     <Button
                       key={key}
-                      variant={frame.status === key ? 'default' : 'outline'}
+                      variant={frame.status === key ? "default" : "outline"}
                       size="sm"
                       className="text-xs h-8"
                       onClick={() => handleStatusChange(key)}
@@ -748,8 +823,8 @@ export default function KiteFrameDetailPage() {
                   size="sm"
                   className="w-full mt-3"
                   onClick={() => {
-                    navigator.clipboard.writeText(frame.clipPathSvg || '');
-                    toast.success('Clip path copied to clipboard');
+                    navigator.clipboard.writeText(frame.clipPathSvg || "");
+                    toast.success("Clip path copied to clipboard");
                   }}
                 >
                   <Copy className="h-3 w-3 mr-1" />
@@ -771,13 +846,23 @@ export default function KiteFrameDetailPage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-1 max-h-[120px] overflow-y-auto">
                   {frame.markerData.map((marker: any, index: number) => (
-                    <div key={index} className="flex items-center gap-1 text-xs p-1 bg-slate-50 dark:bg-slate-800/50 rounded">
-                      <span className="font-medium text-muted-foreground">#{index + 1}</span>
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 text-xs p-1 bg-slate-50 dark:bg-slate-800/50 rounded"
+                    >
+                      <span className="font-medium text-muted-foreground">
+                        #{index + 1}
+                      </span>
                       <span className="text-muted-foreground">
                         ({Math.round(marker.x)}, {Math.round(marker.y)})
                       </span>
-                      {marker.type === 'curve' && (
-                        <Badge variant="outline" className="text-[8px] h-4 px-1">curve</Badge>
+                      {marker.type === "curve" && (
+                        <Badge
+                          variant="outline"
+                          className="text-[8px] h-4 px-1"
+                        >
+                          curve
+                        </Badge>
                       )}
                     </div>
                   ))}

@@ -85,6 +85,16 @@ export default function GeneralSettingsPage() {
   });
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [sessionTimeout, setSessionTimeout] = useState<string>('60');
+  const [maxLoginAttempts, setMaxLoginAttempts] = useState<string>('5');
+  const [darkTheme, setDarkTheme] = useState<boolean>(false);
+  const [systemTheme, setSystemTheme] = useState<boolean>(true);
+  const [primaryColor, setPrimaryColor] = useState<string>('#3b82f6');
+  const [senderEmail, setSenderEmail] = useState<string>('');
+  const [smtpHost, setSmtpHost] = useState<string>('');
+  const [smtpPort, setSmtpPort] = useState<string>('');
+  const [smtpUser, setSmtpUser] = useState<string>('');
+  const [smtpPassword, setSmtpPassword] = useState<string>('');
 
   useEffect(() => {
     fetchSettings();
@@ -99,6 +109,37 @@ export default function GeneralSettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
+    }
+  };
+
+  // Fixed: Properly typed onChange handlers
+  const handleLanguageChange = (value: string | null) => {
+    if (value) {
+      setSettings({ ...settings, language: value });
+    }
+  };
+
+  const handleTimezoneChange = (value: string | null) => {
+    if (value) {
+      setSettings({ ...settings, timezone: value });
+    }
+  };
+
+  const handleDateFormatChange = (value: string | null) => {
+    if (value) {
+      setSettings({ ...settings, dateFormat: value });
+    }
+  };
+
+  const handleSessionTimeoutChange = (value: string | null) => {
+    if (value) {
+      setSessionTimeout(value);
+    }
+  };
+
+  const handleMaxLoginAttemptsChange = (value: string | null) => {
+    if (value) {
+      setMaxLoginAttempts(value);
     }
   };
 
@@ -218,7 +259,7 @@ export default function GeneralSettingsPage() {
                   <Label htmlFor="language">Bahasa</Label>
                   <Select
                     value={settings.language}
-                    onValueChange={(value) => setSettings({ ...settings, language: value })}
+                    onValueChange={handleLanguageChange}
                   >
                     <SelectTrigger>
                       <Languages className="mr-2 h-4 w-4" />
@@ -235,7 +276,7 @@ export default function GeneralSettingsPage() {
                   <Label htmlFor="timezone">Zona Waktu</Label>
                   <Select
                     value={settings.timezone}
-                    onValueChange={(value) => setSettings({ ...settings, timezone: value })}
+                    onValueChange={handleTimezoneChange}
                   >
                     <SelectTrigger>
                       <Clock className="mr-2 h-4 w-4" />
@@ -253,7 +294,7 @@ export default function GeneralSettingsPage() {
                   <Label htmlFor="dateFormat">Format Tanggal</Label>
                   <Select
                     value={settings.dateFormat}
-                    onValueChange={(value) => setSettings({ ...settings, dateFormat: value })}
+                    onValueChange={handleDateFormatChange}
                   >
                     <SelectTrigger>
                       <Calendar className="mr-2 h-4 w-4" />
@@ -327,7 +368,10 @@ export default function GeneralSettingsPage() {
                     Waktu session berakhir (menit)
                   </p>
                 </div>
-                <Select defaultValue="60">
+                <Select
+                  value={sessionTimeout}
+                  onValueChange={handleSessionTimeoutChange}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -348,7 +392,10 @@ export default function GeneralSettingsPage() {
                     Jumlah percobaan login sebelum akun terkunci
                   </p>
                 </div>
-                <Select defaultValue="5">
+                <Select
+                  value={maxLoginAttempts}
+                  onValueChange={handleMaxLoginAttemptsChange}
+                >
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -382,8 +429,9 @@ export default function GeneralSettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  defaultChecked={false}
+                  checked={darkTheme}
                   onCheckedChange={(checked) => {
+                    setDarkTheme(checked);
                     document.documentElement.classList.toggle('dark', checked);
                   }}
                 />
@@ -396,18 +444,31 @@ export default function GeneralSettingsPage() {
                     Gunakan tema sesuai pengaturan sistem
                   </p>
                 </div>
-                <Switch defaultChecked={true} />
+                <Switch
+                  checked={systemTheme}
+                  onCheckedChange={(checked) => {
+                    setSystemTheme(checked);
+                    if (checked) {
+                      // Check system preference
+                      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                      document.documentElement.classList.toggle('dark', prefersDark);
+                    }
+                  }}
+                />
               </div>
 
               <div className="border-t pt-4">
                 <Label>Warna Primer</Label>
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 mt-2 flex-wrap">
                   {['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'].map((color) => (
                     <button
                       key={color}
-                      className="w-10 h-10 rounded-full border-2 border-transparent hover:border-primary transition-colors"
+                      className={`w-10 h-10 rounded-full border-2 transition-colors ${
+                        primaryColor === color ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-transparent hover:border-primary'
+                      }`}
                       style={{ backgroundColor: color }}
                       onClick={() => {
+                        setPrimaryColor(color);
                         document.documentElement.style.setProperty('--primary', color);
                       }}
                     />
@@ -459,6 +520,8 @@ export default function GeneralSettingsPage() {
                 <Input
                   type="email"
                   placeholder="admin@windkite.com"
+                  value={senderEmail}
+                  onChange={(e) => setSenderEmail(e.target.value)}
                   className="mt-2"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
@@ -469,12 +532,30 @@ export default function GeneralSettingsPage() {
               <div className="space-y-2">
                 <Label>Email SMTP</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input placeholder="smtp.gmail.com" />
-                  <Input placeholder="587" />
+                  <Input 
+                    placeholder="smtp.gmail.com" 
+                    value={smtpHost}
+                    onChange={(e) => setSmtpHost(e.target.value)}
+                  />
+                  <Input 
+                    placeholder="587" 
+                    value={smtpPort}
+                    onChange={(e) => setSmtpPort(e.target.value)}
+                  />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input type="email" placeholder="admin@windkite.com" />
-                  <Input type="password" placeholder="password" />
+                  <Input 
+                    type="email" 
+                    placeholder="admin@windkite.com" 
+                    value={smtpUser}
+                    onChange={(e) => setSmtpUser(e.target.value)}
+                  />
+                  <Input 
+                    type="password" 
+                    placeholder="password" 
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                  />
                 </div>
               </div>
             </CardContent>

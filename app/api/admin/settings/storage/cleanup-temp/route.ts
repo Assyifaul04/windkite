@@ -1,58 +1,41 @@
 // app/api/admin/settings/storage/cleanup-temp/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { subDays } from 'date-fns';
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Ambil setting retention days
+    // Get settings
     const settings = await prisma.storageSettings.findFirst();
     const retentionDays = settings?.tempStorageDays || 7;
-    const cutoffDate = subDays(new Date(), retentionDays);
+    
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() - retentionDays);
 
-    // Cari file yang sudah melewati masa retention
-    const oldDesigns = await prisma.kiteDesign.findMany({
+    // Delete expired temporary files
+    const deleted = await prisma.storageFile.deleteMany({
       where: {
-        createdAt: {
-          lt: cutoffDate,
-        },
-        // Filter file yang masih di Neon (bukan Google Drive)
-        imageUrl: {
-          contains: 'neon',
+        storageType: 'temporary',
+        expiresAt: {
+          lte: expireDate,
         },
       },
     });
 
-    let deletedCount = 0;
-
-    for (const design of oldDesigns) {
-      try {
-        // Hapus file dari database
-        await prisma.kiteDesign.delete({
-          where: { id: design.id },
-        });
-        deletedCount++;
-      } catch (error) {
-        console.error(`Failed to delete file ${design.id}:`, error);
-      }
-    }
-
     return NextResponse.json({
-      success: true,
-      deletedCount,
-      message: `${deletedCount} temporary files cleaned up`,
+      message: `Cleaned up ${deleted.count} temporary files`,
+      deletedCount: deleted.count,
     });
   } catch (error) {
-    console.error('Error cleaning temp files:', error);
+    console.error('Error cleaning up temp files:', error);
     return NextResponse.json(
-      { error: 'Failed to clean temporary files' },
+      { error: 'Failed to clean up temporary files' },
       { status: 500 }
     );
   }
