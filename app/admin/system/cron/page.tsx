@@ -256,6 +256,7 @@ export default function CronJobsPage() {
   const scheduleExamples = [
     { label: 'Setiap 6 jam', value: '0 */6 * * *' },
     { label: 'Setiap hari jam 00:00', value: '0 0 * * *' },
+    { label: 'Setiap hari jam 01:00', value: '0 1 * * *' },
     { label: 'Setiap jam', value: '0 * * * *' },
     { label: 'Setiap 30 menit', value: '*/30 * * * *' },
     { label: 'Setiap Minggu', value: '0 0 * * 0' },
@@ -351,9 +352,9 @@ export default function CronJobsPage() {
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-emerald-500" />
               <span className="text-2xl font-bold">
-                {jobs.length > 0 
+                {jobs.length > 0 && jobs.reduce((acc, j) => acc + j.runs, 0) > 0
                   ? Math.round((jobs.reduce((acc, j) => acc + j.successfulRuns, 0) / 
-                      jobs.reduce((acc, j) => acc + j.runs, 0)) * 100) 
+                      jobs.reduce((acc, j) => acc + j.runs, 0)) * 100)
                   : 0}%
               </span>
             </div>
@@ -509,7 +510,7 @@ export default function CronJobsPage() {
                 <Label htmlFor="description">Deskripsi</Label>
                 <Input
                   id="description"
-                  placeholder="Update data cuaca setiap 6 jam"
+                  placeholder="Update data cuaca setiap hari jam 00:00"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />

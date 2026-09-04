@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { addHours, setMinutes, setSeconds } from 'date-fns';
+import { addHours, addDays, setHours, setMinutes, setSeconds } from 'date-fns';
 
 export async function POST(
   req: NextRequest,
@@ -15,8 +15,10 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const job = await prisma.cronJob.findUnique({
-      where: { id: (await params).id },
+      where: { id },
     });
 
     if (!job) {
@@ -83,7 +85,7 @@ export async function POST(
     updateData.nextRun = calculateNextRun(job.schedule);
 
     const updatedJob = await prisma.cronJob.update({
-      where: { id: (await params).id },
+      where: { id },
       data: updateData,
     });
 
@@ -107,7 +109,7 @@ export async function POST(
 async function executeWeatherUpdate(): Promise<string> {
   try {
     // Panggil API internal untuk update weather
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://windkite.vercel.app';
     const response = await fetch(`${baseUrl}/api/cron/update-weather`);
     
     if (!response.ok) {
@@ -124,7 +126,7 @@ async function executeWeatherUpdate(): Promise<string> {
 
 async function executeSessionCleanup(): Promise<string> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://windkite.vercel.app';
     const response = await fetch(`${baseUrl}/api/cron/clean-sessions`);
     
     if (!response.ok) {
@@ -141,7 +143,7 @@ async function executeSessionCleanup(): Promise<string> {
 
 async function executeReportGeneration(): Promise<string> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://windkite.vercel.app';
     const response = await fetch(`${baseUrl}/api/cron/generate-reports`);
     
     if (!response.ok) {
@@ -156,6 +158,7 @@ async function executeReportGeneration(): Promise<string> {
   }
 }
 
+// Updated: Better schedule calculation with daily support
 function calculateNextRun(schedule: string): Date {
   const now = new Date();
   const parts = schedule.trim().split(' ');
@@ -169,26 +172,49 @@ function calculateNextRun(schedule: string): Date {
   let nextRun = new Date(now);
   nextRun = setSeconds(nextRun, 0);
   
-  // Pattern: "0 */6 * * *" (setiap 6 jam)
+  // Check for common patterns
+  // Pattern: "0 0 * * *" (daily at midnight - for weather update)
+  if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
+    nextRun = new Date(now);
+    // If current time is after midnight, set to next midnight
+    if (now.getHours() >= 0 && now.getMinutes() > 0) {
+      nextRun.setDate(now.getDate() + 1);
+    }
+    nextRun.setHours(0, 0, 0, 0);
+    return nextRun;
+  }
+  
+  // Pattern: "0 */6 * * *" (every 6 hours)
   if (minute === '0' && hour === '*/6' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = addHours(now, 6);
     nextRun = setMinutes(nextRun, 0);
     nextRun = setSeconds(nextRun, 0);
+    return nextRun;
   }
-  // Pattern: "0 0 * * *" (setiap hari jam 00:00)
-  else if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = new Date(now);
-    nextRun.setDate(now.getDate() + 1);
-    nextRun.setHours(0, 0, 0, 0);
+  
+  // Pattern: "0 1 * * *" (daily at 1 AM)
+  if (minute === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
+    const hourNum = parseInt(hour);
+    if (!isNaN(hourNum)) {
+      nextRun = new Date(now);
+      if (now.getHours() >= hourNum) {
+        nextRun.setDate(now.getDate() + 1);
+      }
+      nextRun.setHours(hourNum, 0, 0, 0);
+      return nextRun;
+    }
   }
-  // Pattern: "0 * * * *" (setiap jam)
-  else if (minute === '0' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
+  
+  // Pattern: "0 * * * *" (every hour)
+  if (minute === '0' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = addHours(now, 1);
     nextRun = setMinutes(nextRun, 0);
     nextRun = setSeconds(nextRun, 0);
+    return nextRun;
   }
-  // Pattern: "*/30 * * * *" (setiap 30 menit)
-  else if (minute === '*/30' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
+  
+  // Pattern: "*/30 * * * *" (every 30 minutes)
+  if (minute === '*/30' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
     const minutes = now.getMinutes();
     const nextMinutes = minutes < 30 ? 30 : 60;
     nextRun = new Date(now);
@@ -197,20 +223,22 @@ function calculateNextRun(schedule: string): Date {
       nextRun.setHours(now.getHours() + 1);
       nextRun.setMinutes(0, 0, 0);
     }
+    return nextRun;
   }
-  // Pattern: "0 0 * * 0" (setiap Minggu)
-  else if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '0') {
+  
+  // Pattern: "0 0 * * 0" (every Sunday at midnight)
+  if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '0') {
     const daysUntilSunday = (7 - now.getDay()) % 7 || 7;
     nextRun = new Date(now);
     nextRun.setDate(now.getDate() + daysUntilSunday);
     nextRun.setHours(0, 0, 0, 0);
+    return nextRun;
   }
-  // Default: 6 jam dari sekarang
-  else {
-    nextRun = addHours(now, 6);
-    nextRun = setMinutes(nextRun, 0);
-    nextRun = setSeconds(nextRun, 0);
-  }
+  
+  // Default: 6 hours from now
+  nextRun = addHours(now, 6);
+  nextRun = setMinutes(nextRun, 0);
+  nextRun = setSeconds(nextRun, 0);
   
   return nextRun;
 }
