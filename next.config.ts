@@ -10,18 +10,24 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/storage/v1/object/public/**",
       },
-      // Tambahkan pattern untuk local development jika diperlukan
       {
         protocol: "http",
         hostname: "localhost",
         port: "3000",
         pathname: "/uploads/**",
       },
+      {
+        protocol: "https",
+        hostname: "*.googleusercontent.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
-    // Untuk development, bisa juga gunakan domains (cara lama)
-    // domains: ['qrpddmkcqryxskezdmby.supabase.co'],
   },
-  // ... konfigurasi lain
+  // Tambahkan konfigurasi lain jika diperlukan
+  experimental: {
+    // Untuk Next.js 16
+  },
 };
 
 export default nextConfig;

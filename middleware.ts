@@ -1,6 +1,26 @@
 // middleware.ts
-import { withAuth } from "next-auth/middleware"
-import { NextResponse } from "next/server"
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+
+// Extend NextAuth types for middleware
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      role: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+  }
+}
 
 export default withAuth(
   function middleware(req) {
@@ -13,7 +33,7 @@ export default withAuth(
 
       // Admin routes
       if (path.startsWith("/admin") && role !== "ADMIN") {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
+        return NextResponse.redirect(new URL("/user/dashboard", req.url));
       }
 
       // Dashboard route untuk admin
@@ -30,7 +50,7 @@ export default withAuth(
 
     // Jika tidak ada token dan mencoba akses protected routes
     const protectedPaths = ["/dashboard", "/admin", "/generate"];
-    if (!token && protectedPaths.some(p => path.startsWith(p))) {
+    if (!token && protectedPaths.some((p) => path.startsWith(p))) {
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", path);
       return NextResponse.redirect(loginUrl);
@@ -38,20 +58,23 @@ export default withAuth(
 
     // Response dengan header anti-cache
     const response = NextResponse.next();
-    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
     response.headers.set("Pragma", "no-cache");
     response.headers.set("Expires", "0");
-    
+
     return response;
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
-        
+
         // Public paths
         const publicPaths = ["/", "/login", "/api/auth"];
-        if (publicPaths.some(p => path.startsWith(p))) {
+        if (publicPaths.some((p) => path.startsWith(p))) {
           return true;
         }
 
@@ -62,7 +85,7 @@ export default withAuth(
 
         // Protected paths lainnya
         const protectedPaths = ["/dashboard", "/generate"];
-        if (protectedPaths.some(p => path.startsWith(p))) {
+        if (protectedPaths.some((p) => path.startsWith(p))) {
           return !!token;
         }
 
@@ -73,14 +96,8 @@ export default withAuth(
       signIn: "/login",
     },
   }
-)
+);
 
 export const config = {
-  matcher: [
-    "/",
-    "/dashboard/:path*",
-    "/admin/:path*",
-    "/generate/:path*",
-    "/login",
-  ],
-}
+  matcher: ["/", "/dashboard/:path*", "/admin/:path*", "/generate/:path*", "/login"],
+};
