@@ -33,6 +33,7 @@ import {
   PaintBrushIcon,
   LayoutIcon,
   ImagesIcon,
+  MegaphoneIcon, // Tambahkan icon untuk Ad Settings
 } from "@phosphor-icons/react";
 
 // Data untuk sidebar yang disesuaikan dengan struktur database
@@ -182,6 +183,14 @@ const data = {
           description:
             "Manage storage & backups (Neon Database & Google Drive)",
         },
+        // ==========================================
+        // TAMBAHAN: Menu Ad Settings
+        // ==========================================
+        {
+          title: "Ad Settings",
+          url: "/admin/settings/ads",
+          description: "Google AdSense configuration",
+        },
       ],
     },
   ],
@@ -242,7 +251,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            {/* Fixed: Removed asChild prop and used direct Link with className */}
             <Link href="/admin/dashboard" className="block w-full">
               <SidebarMenuButton size="lg" className="w-full">
                 <div className="flex items-center justify-center w-full overflow-hidden">

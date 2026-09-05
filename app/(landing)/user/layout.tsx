@@ -2,6 +2,7 @@
 "use client";
 
 import { SettingsDialog } from "@/components/user/settings-dialog";
+import { AdBanner } from "@/components/ads/ad-banner";
 
 export default function UserLayout({
   children,
@@ -10,12 +11,30 @@ export default function UserLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4">
-        <SettingsDialog>
-          <div className="w-full max-w-full">
-            {children}
-          </div>
-        </SettingsDialog>
+      {/* Iklan Atas (Top) */}
+      <div className="w-full h-[80px] px-4 pt-4 pb-2">
+        <AdBanner position="top" className="w-full h-full rounded-lg" />
+      </div>
+
+      <div className="flex-1 flex items-stretch justify-center gap-4 p-2 sm:p-4">
+        {/* Iklan Kiri */}
+        <div className="hidden lg:flex w-[220px] shrink-0 h-[calc(100vh-120px)] sticky top-4">
+          <AdBanner position="left" className="w-full h-full rounded-lg" />
+        </div>
+
+        {/* Konten Utama */}
+        <div className="flex-1 flex items-center justify-center min-w-0">
+          <SettingsDialog>
+            <div className="w-full max-w-full">
+              {children}
+            </div>
+          </SettingsDialog>
+        </div>
+
+        {/* Iklan Kanan */}
+        <div className="hidden lg:flex w-[220px] shrink-0 h-[calc(100vh-120px)] sticky top-4">
+          <AdBanner position="right" className="w-full h-full rounded-lg" />
+        </div>
       </div>
     </div>
   );

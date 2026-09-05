@@ -324,3 +324,21 @@ model StorageSettings {
 
   @@map("storage_settings")
 }
+
+// ==========================================
+// TABEL PENGATURAN IKLAN (Google AdSense)
+// ==========================================
+
+model AdSettings {
+  id        String   @id @default(cuid())
+  provider  String   @default("google_adsense")
+  scriptUrl String?  @map("script_url") @db.Text
+  clientId  String?  @map("client_id")
+  adSlot    String?  @map("ad_slot")
+  isActive  Boolean  @default(true) @map("is_active")
+  position  String   @default("global")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("ad_settings")
+}
