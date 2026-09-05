@@ -43,7 +43,7 @@ export default function RootLayout({
       )}
     >
       {/* HAPUS SCRIPT DI SINI */}
-      <body className="min-h-full flex flex-col font-sans">
+     <body className="min-h-full flex flex-col font-sans">
         <Providers>
           {children}
         </Providers>

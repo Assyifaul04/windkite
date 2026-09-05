@@ -14,14 +14,15 @@ interface AdSettings {
 }
 
 interface AdBannerProps {
-  position?: string; // "top", "left", "right"
+  position?: string;
   className?: string;
 }
 
 export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
   const [adSettings, setAdSettings] = useState<AdSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const adsPushed = useRef(false); // Gunakan ref, bukan state global
+  const adsPushed = useRef(false);
+  const insRef = useRef<HTMLModElement>(null); // Referensi ke elemen <ins>
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -63,7 +64,7 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
         try {
           (window as any).adsbygoogle = (window as any).adsbygoogle || [];
           (window as any).adsbygoogle.push({});
-          adsPushed.current = true; // Tandai sudah di-push untuk banner ini
+          adsPushed.current = true;
         } catch (e) {
           console.error("AdSense error:", e);
         }
@@ -73,7 +74,7 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
     const currentScript = script;
     currentScript.onload = pushAd;
 
-    // Jika script sudah dimuat sebelumnya (karena sudah ada di DOM), langsung push
+    // Fallback: jika script sudah ada dan sudah dimuat, langsung push
     if (script && (script as any).readyState === "complete") {
       pushAd();
     }
@@ -92,10 +93,12 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
   }
 
   return (
-    <div className={`flex flex-col items-center justify-center w-full ${className}`}>
+    // Tambahkan min-h-[100px] dan w-full agar iklan punya ruang
+    <div className={`flex flex-col items-center justify-center w-full bg-black min-h-[100px] overflow-hidden ${className}`}>
       <ins
+        ref={insRef}
         className="adsbygoogle"
-        style={{ display: "block", width: "100%", height: "100%" }}
+        style={{ display: "block", width: "100%", minHeight: "100px", height: "100%" }}
         data-ad-client={adSettings.clientId!}
         data-ad-slot={adSettings.adSlot || "9422886372"}
         data-ad-format="auto"
