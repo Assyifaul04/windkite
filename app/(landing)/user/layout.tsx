@@ -12,13 +12,13 @@ export default function UserLayout({
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Iklan Atas (Top) */}
-      <div className="w-full h-[80px] px-4 pt-4 pb-2">
+      <div className="w-full h-[90px] px-4 pt-4 pb-2">
         <AdBanner position="top" className="w-full h-full rounded-lg" />
       </div>
 
       <div className="flex-1 flex items-stretch justify-center gap-4 p-2 sm:p-4">
         {/* Iklan Kiri */}
-        <div className="hidden lg:flex w-[220px] shrink-0 h-[calc(100vh-120px)] sticky top-4">
+        <div className="hidden lg:flex w-[300px] shrink-0 h-[calc(100vh-130px)] sticky top-4">
           <AdBanner position="left" className="w-full h-full rounded-lg" />
         </div>
 
@@ -32,7 +32,7 @@ export default function UserLayout({
         </div>
 
         {/* Iklan Kanan */}
-        <div className="hidden lg:flex w-[220px] shrink-0 h-[calc(100vh-120px)] sticky top-4">
+        <div className="hidden lg:flex w-[300px] shrink-0 h-[calc(100vh-130px)] sticky top-4">
           <AdBanner position="right" className="w-full h-full rounded-lg" />
         </div>
       </div>

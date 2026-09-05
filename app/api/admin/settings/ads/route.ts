@@ -4,24 +4,17 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// GET - Get ad settings (Bisa diakses oleh User & Admin untuk menampilkan iklan)
 export async function GET() {
   try {
-    // Hapus pengecekan session admin agar User biasa bisa membaca pengaturan iklan
-    // const session = await getServerSession(authOptions);
-    // if (!session || session.user.role !== 'ADMIN') {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    // }
-
     let settings = await prisma.adSettings.findFirst();
 
     if (!settings) {
       settings = await prisma.adSettings.create({
         data: {
           provider: 'google_adsense',
-          scriptUrl: '',
-          clientId: '',
-          adSlot: '',
+          scriptUrl: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7542754799825568',
+          clientId: 'ca-pub-7542754799825568',
+          adSlot: '9422886372',
           isActive: true,
           position: 'global',
         },
@@ -31,14 +24,10 @@ export async function GET() {
     return NextResponse.json(settings);
   } catch (error) {
     console.error('Error fetching ad settings:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch ad settings' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch ad settings' }, { status: 500 });
   }
 }
 
-// POST - Create or update ad settings (Hanya Admin yang boleh mengubah)
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -83,9 +72,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Error saving ad settings:', error);
-    return NextResponse.json(
-      { error: 'Failed to save ad settings' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to save ad settings' }, { status: 500 });
   }
 }
