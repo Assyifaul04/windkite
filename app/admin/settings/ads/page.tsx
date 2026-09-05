@@ -25,14 +25,10 @@ import { toast } from 'sonner';
 import {
   Megaphone,
   Save,
-  RefreshCw,
+  Plus,
+  Trash2,
   Loader2,
-  CheckCircle,
-  AlertCircle,
-  Eye,
-  EyeOff,
   Info,
-  ExternalLink,
   Copy,
 } from 'lucide-react';
 
@@ -48,14 +44,21 @@ interface AdSettings {
   updatedAt?: string;
 }
 
+const POSITION_OPTIONS = [
+  { value: 'top', label: 'Top (Atas)' },
+  { value: 'left', label: 'Left (Kiri)' },
+  { value: 'right', label: 'Right (Kanan)' },
+];
+
 export default function AdSettingsPage() {
-  const [settings, setSettings] = useState<AdSettings>({
+  const [settingsList, setSettingsList] = useState<AdSettings[]>([]);
+  const [form, setForm] = useState<AdSettings>({
     provider: 'google_adsense',
     scriptUrl: '',
     clientId: '',
     adSlot: '',
     isActive: true,
-    position: 'global',
+    position: 'top',
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,7 +74,7 @@ export default function AdSettingsPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setSettings(data);
+        setSettingsList(data);
       } else {
         toast.error('Gagal memuat pengaturan iklan');
       }
@@ -83,24 +86,30 @@ export default function AdSettingsPage() {
     }
   };
 
-  const handleSave = async () => {
+  const handleAdd = async () => {
     try {
       setSaving(true);
       const response = await fetch('/api/admin/settings/ads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(form),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Pengaturan iklan berhasil disimpan');
-        if (data.data) {
-          setSettings(data.data);
-        }
+        toast.success('Iklan berhasil ditambahkan');
+        setForm({
+          provider: 'google_adsense',
+          scriptUrl: '',
+          clientId: '',
+          adSlot: '',
+          isActive: true,
+          position: 'top',
+        });
+        fetchSettings();
       } else {
-        toast.error(data.error || 'Gagal menyimpan pengaturan');
+        toast.error(data.error || 'Gagal menambahkan iklan');
       }
     } catch (error) {
       console.error('Error saving ad settings:', error);
@@ -110,26 +119,59 @@ export default function AdSettingsPage() {
     }
   };
 
-  const handleCopy = (text: string) => {
-    if (!text) {
-      toast.error('Tidak ada teks untuk disalin');
-      return;
+  const handleToggleActive = async (item: AdSettings) => {
+    try {
+      const response = await fetch('/api/admin/settings/ads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: item.id,
+          isActive: !item.isActive,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`Iklan ${item.isActive ? 'dinonaktifkan' : 'diaktifkan'}`);
+        fetchSettings();
+      } else {
+        toast.error(data.error || 'Gagal mengubah status');
+      }
+    } catch (error) {
+      console.error('Error updating ad settings:', error);
+      toast.error('Terjadi kesalahan');
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const response = await fetch('/api/admin/settings/ads', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success('Iklan berhasil dihapus');
+        fetchSettings();
+      } else {
+        toast.error(data.error || 'Gagal menghapus iklan');
+      }
+    } catch (error) {
+      console.error('Error deleting ad settings:', error);
+      toast.error('Terjadi kesalahan');
+    }
+  };
+
+  const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('Berhasil disalin');
   };
 
-  const getStatusBadge = () => {
-    if (!settings.isActive) {
-      return <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300">Nonaktif</Badge>;
-    }
-    if (settings.clientId && settings.scriptUrl) {
-      return <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Aktif & Siap Tayang</Badge>;
-    }
-    return <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">Belum Lengkap</Badge>;
-  };
-
-  if (loading) {
+  if (loading && settingsList.length === 0) {
     return (
       <div className="p-6 space-y-6">
         <div className="h-8 w-48 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
@@ -148,65 +190,34 @@ export default function AdSettingsPage() {
             Pengaturan Iklan
           </h1>
           <p className="text-sm text-muted-foreground">
-            Konfigurasi Google AdSense dan status penayangan
+            Kelola iklan Google AdSense berdasarkan posisi
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 mr-2">
-            <span className="text-sm text-muted-foreground">Status:</span>
-            {getStatusBadge()}
-          </div>
-          <Button variant="outline" size="sm" onClick={fetchSettings} disabled={loading}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" />
-                Simpan
-              </>
-            )}
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={fetchSettings} disabled={loading}>
+          <Loader2 className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
-      {/* Form Pengisian */}
+      {/* Form Tambah Iklan */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Konfigurasi Kredensial AdSense</CardTitle>
+          <CardTitle className="text-lg">Tambah Iklan Baru</CardTitle>
           <CardDescription>
-            Masukkan data yang didapat dari Google AdSense
+            Isi kredensial AdSense dan pilih posisi penempatan
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="clientId">Client ID</Label>
-              <div className="relative">
-                <Input
-                  id="clientId"
-                  placeholder="ca-pub-7542754799825568"
-                  value={settings.clientId || ''}
-                  onChange={(e) => setSettings({ ...settings, clientId: e.target.value })}
-                  className="font-mono text-sm pr-10"
-                />
-                {settings.clientId && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-2"
-                    onClick={() => handleCopy(settings.clientId || '')}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+              <Input
+                id="clientId"
+                placeholder="ca-pub-7542754799825568"
+                value={form.clientId}
+                onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+                className="font-mono text-sm"
+              />
             </div>
 
             <div className="space-y-2">
@@ -214,8 +225,8 @@ export default function AdSettingsPage() {
               <Input
                 id="adSlot"
                 placeholder="9422886372"
-                value={settings.adSlot || ''}
-                onChange={(e) => setSettings({ ...settings, adSlot: e.target.value })}
+                value={form.adSlot}
+                onChange={(e) => setForm({ ...form, adSlot: e.target.value })}
                 className="font-mono text-sm"
               />
             </div>
@@ -224,121 +235,132 @@ export default function AdSettingsPage() {
               <Label htmlFor="scriptUrl">Script URL</Label>
               <Input
                 id="scriptUrl"
-                placeholder="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7542754799825568"
-                value={settings.scriptUrl || ''}
-                onChange={(e) => setSettings({ ...settings, scriptUrl: e.target.value })}
+                placeholder="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-..."
+                value={form.scriptUrl}
+                onChange={(e) => setForm({ ...form, scriptUrl: e.target.value })}
                 className="font-mono text-sm"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="position">Posisi Penempatan</Label>
+              <select
+                id="position"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.position}
+                onChange={(e) => setForm({ ...form, position: e.target.value })}
+              >
+                {POSITION_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={handleAdd} disabled={saving} className="gap-2">
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Tambah Iklan
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabel Posisi & Status */}
+      {/* Tabel List Iklan */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Posisi & Status Penayangan</CardTitle>
+          <CardTitle className="text-lg">Daftar Iklan Terpasang</CardTitle>
           <CardDescription>
-            Atur posisi iklan sesuai komponen AdBanner dan status aktif/nonaktif
+            Kelola status dan hapus iklan yang sudah ada
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Posisi</TableHead>
-                <TableHead>Deskripsi</TableHead>
+                <TableHead>Client ID</TableHead>
+                <TableHead>Ad Slot</TableHead>
+                <TableHead className="max-w-[200px]">Script URL</TableHead>
+                <TableHead>Posisi</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Top (Atas)</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  Ditampilkan di header atas halaman user
-                </TableCell>
-                <TableCell className="text-center">
-                  {settings.isActive ? (
-                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Aktif</Badge>
-                  ) : (
-                    <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300">Nonaktif</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant={settings.isActive ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => setSettings({ ...settings, isActive: !settings.isActive })}
-                  >
-                    {settings.isActive ? "Nonaktifkan" : "Aktifkan"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-
-              <TableRow>
-                <TableCell className="font-medium">Left (Kiri)</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  Sidebar kiri pada halaman user
-                </TableCell>
-                <TableCell className="text-center">
-                  {settings.isActive ? (
-                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Aktif</Badge>
-                  ) : (
-                    <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300">Nonaktif</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant={settings.isActive ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => setSettings({ ...settings, isActive: !settings.isActive })}
-                  >
-                    {settings.isActive ? "Nonaktifkan" : "Aktifkan"}
-                  </Button>
-                </TableCell>
-              </TableRow>
-
-              <TableRow>
-                <TableCell className="font-medium">Right (Kanan)</TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  Sidebar kanan pada halaman user
-                </TableCell>
-                <TableCell className="text-center">
-                  {settings.isActive ? (
-                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Aktif</Badge>
-                  ) : (
-                    <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300">Nonaktif</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant={settings.isActive ? "destructive" : "default"}
-                    size="sm"
-                    onClick={() => setSettings({ ...settings, isActive: !settings.isActive })}
-                  >
-                    {settings.isActive ? "Nonaktifkan" : "Aktifkan"}
-                  </Button>
-                </TableCell>
-              </TableRow>
+              {settingsList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Belum ada iklan terpasang. Tambahkan melalui form di atas.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                settingsList.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-mono text-xs">
+                      {item.clientId || '-'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {item.adSlot || '-'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs truncate max-w-[200px]" title={item.scriptUrl}>
+                      {item.scriptUrl || '-'}
+                    </TableCell>
+                    <TableCell className="text-sm capitalize">
+                      {item.position}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {item.isActive ? (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Aktif</Badge>
+                      ) : (
+                        <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-300">Nonaktif</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant={item.isActive ? "destructive" : "default"}
+                          size="sm"
+                          onClick={() => handleToggleActive(item)}
+                        >
+                          {item.isActive ? "Nonaktifkan" : "Aktifkan"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(item.id!)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Info Tambahan */}
+      {/* Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Informasi Penting</CardTitle>
+          <CardTitle className="text-lg">Informasi</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <div className="flex items-start gap-2">
             <Info className="h-4 w-4 text-blue-500 mt-1 flex-shrink-0" />
-            <span>Pastikan <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-xs">Client ID</code> dan <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-xs">Script URL</code> sudah diisi agar iklan muncul di komponen AdBanner.</span>
+            <span>Setiap baris mewakili satu posisi iklan (Top, Left, atau Right). Tombol <b>Aktifkan</b> akan menampilkan iklan di posisi tersebut.</span>
           </div>
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 text-yellow-500 mt-1 flex-shrink-0" />
-            <span>Jika tombol berwarna merah ("Nonaktifkan") ditekan, iklan akan disembunyikan dari semua posisi.</span>
+            <Info className="h-4 w-4 text-blue-500 mt-1 flex-shrink-0" />
+            <span>Jika posisi yang sama ditambahkan lebih dari satu kali, hanya yang terbaru yang akan digunakan oleh komponen <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-xs">AdBanner</code>.</span>
           </div>
         </CardContent>
       </Card>

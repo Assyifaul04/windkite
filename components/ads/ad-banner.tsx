@@ -14,11 +14,11 @@ interface AdSettings {
 }
 
 interface AdBannerProps {
-  position?: string; // "top", "left", "right", "global"
+  position?: string; // "top", "left", "right"
   className?: string;
 }
 
-export function AdBanner({ position = "global", className = "" }: AdBannerProps) {
+export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
   const [adSettings, setAdSettings] = useState<AdSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [adsLoaded, setAdsLoaded] = useState(false);
@@ -29,7 +29,11 @@ export function AdBanner({ position = "global", className = "" }: AdBannerProps)
         const res = await fetch("/api/admin/settings/ads");
         const data = await res.json();
         if (res.ok && data) {
-          setAdSettings(data);
+          // Cari iklan yang cocok dengan posisi dan statusnya aktif
+          const matchedAd = data.find(
+            (ad: AdSettings) => ad.position === position && ad.isActive
+          );
+          setAdSettings(matchedAd || null);
         }
       } catch (error) {
         console.error("Failed to fetch ads:", error);
@@ -38,7 +42,7 @@ export function AdBanner({ position = "global", className = "" }: AdBannerProps)
       }
     };
     fetchAds();
-  }, []);
+  }, [position]);
 
   useEffect(() => {
     if (!adSettings?.scriptUrl || !adSettings?.isActive) return;
@@ -75,7 +79,7 @@ export function AdBanner({ position = "global", className = "" }: AdBannerProps)
     };
   }, [adSettings, adsLoaded]);
 
-  if (!adSettings?.isActive || !adSettings.clientId || isLoading) {
+  if (!adSettings || isLoading) {
     return (
       <div className={`flex items-center justify-center border border-dashed border-zinc-700 bg-zinc-950 text-zinc-500 ${className}`}>
         <span className="text-sm">Ad Placeholder ({position})</span>
@@ -88,7 +92,7 @@ export function AdBanner({ position = "global", className = "" }: AdBannerProps)
       <ins
         className="adsbygoogle"
         style={{ display: "block", width: "100%", height: "100%" }}
-        data-ad-client={adSettings.clientId}
+        data-ad-client={adSettings.clientId!}
         data-ad-slot={adSettings.adSlot || "9422886372"}
         data-ad-format="auto"
         data-full-width-responsive="true"
