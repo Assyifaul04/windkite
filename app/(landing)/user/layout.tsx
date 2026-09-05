@@ -11,19 +11,23 @@ export default function UserLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      {/* Iklan Atas (Top) */}
-      <div className="w-full h-[90px] px-4 pt-4 pb-2">
+      {/* Iklan Atas (Top) - Full Width */}
+      <div className="w-full h-[90px] shrink-0 px-4 pt-4 pb-2">
         <AdBanner position="top" className="w-full h-full rounded-lg" />
       </div>
 
-      <div className="flex-1 flex items-stretch justify-center gap-4 p-2 sm:p-4">
-        {/* Iklan Kiri */}
-        <div className="hidden lg:flex w-[300px] shrink-0 h-[calc(100vh-130px)] sticky top-4">
-          <AdBanner position="left" className="w-full h-full rounded-lg" />
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col lg:flex-row items-stretch justify-center gap-4 p-2 sm:p-4 overflow-hidden">
+        
+        {/* Iklan Kiri - Hanya di Desktop */}
+        <div className="hidden lg:block w-[300px] shrink-0">
+          <div className="sticky top-4 h-[calc(100vh-130px)]">
+            <AdBanner position="left" className="w-full h-full rounded-lg" />
+          </div>
         </div>
 
-        {/* Konten Utama */}
-        <div className="flex-1 flex items-center justify-center min-w-0">
+        {/* Konten Utama - Scrollable di dalam */}
+        <div className="flex-1 flex items-center justify-center min-w-0 overflow-y-auto max-h-[calc(100vh-130px)]">
           <SettingsDialog>
             <div className="w-full max-w-full">
               {children}
@@ -31,10 +35,13 @@ export default function UserLayout({
           </SettingsDialog>
         </div>
 
-        {/* Iklan Kanan */}
-        <div className="hidden lg:flex w-[300px] shrink-0 h-[calc(100vh-130px)] sticky top-4">
-          <AdBanner position="right" className="w-full h-full rounded-lg" />
+        {/* Iklan Kanan - Hanya di Desktop */}
+        <div className="hidden lg:block w-[300px] shrink-0">
+          <div className="sticky top-4 h-[calc(100vh-130px)]">
+            <AdBanner position="right" className="w-full h-full rounded-lg" />
+          </div>
         </div>
+        
       </div>
     </div>
   );

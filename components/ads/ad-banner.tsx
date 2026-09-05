@@ -1,7 +1,7 @@
 // components/ads/ad-banner.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface AdSettings {
   id: string;
@@ -21,7 +21,7 @@ interface AdBannerProps {
 export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
   const [adSettings, setAdSettings] = useState<AdSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [adsLoaded, setAdsLoaded] = useState(false);
+  const adsPushed = useRef(false); // Gunakan ref, bukan state global
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -29,7 +29,6 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
         const res = await fetch("/api/admin/settings/ads");
         const data = await res.json();
         if (res.ok && data) {
-          // Cari iklan yang cocok dengan posisi dan statusnya aktif
           const matchedAd = data.find(
             (ad: AdSettings) => ad.position === position && ad.isActive
           );
@@ -45,7 +44,7 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
   }, [position]);
 
   useEffect(() => {
-    if (!adSettings?.scriptUrl || !adSettings?.isActive) return;
+    if (!adSettings?.scriptUrl || !adSettings?.isActive || adsPushed.current) return;
 
     const scriptId = "adsbygoogle-script";
     let script = document.getElementById(scriptId) as HTMLScriptElement | null;
@@ -60,11 +59,11 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
     }
 
     const pushAd = () => {
-      if (!adsLoaded && (window as any).adsbygoogle) {
+      if (!adsPushed.current && (window as any).adsbygoogle) {
         try {
           (window as any).adsbygoogle = (window as any).adsbygoogle || [];
           (window as any).adsbygoogle.push({});
-          setAdsLoaded(true);
+          adsPushed.current = true; // Tandai sudah di-push untuk banner ini
         } catch (e) {
           console.error("AdSense error:", e);
         }
@@ -74,10 +73,15 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
     const currentScript = script;
     currentScript.onload = pushAd;
 
+    // Jika script sudah dimuat sebelumnya (karena sudah ada di DOM), langsung push
+    if (script && (script as any).readyState === "complete") {
+      pushAd();
+    }
+
     return () => {
       currentScript.onload = null;
     };
-  }, [adSettings, adsLoaded]);
+  }, [adSettings]);
 
   if (!adSettings || isLoading) {
     return (
@@ -88,7 +92,7 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
   }
 
   return (
-    <div className={`flex flex-col items-center justify-center w-full bg-black ${className}`}>
+    <div className={`flex flex-col items-center justify-center w-full ${className}`}>
       <ins
         className="adsbygoogle"
         style={{ display: "block", width: "100%", height: "100%" }}

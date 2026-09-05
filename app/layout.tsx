@@ -4,7 +4,6 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/layout/providers";
-import Script from "next/script"; // Tambahkan import ini
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -43,13 +42,7 @@ export default function RootLayout({
         jetbrainsMono.variable
       )}
     >
-      <head>
-        <script 
-          async 
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7542754799825568"
-          crossOrigin="anonymous" 
-        />
-      </head>
+      {/* HAPUS SCRIPT DI SINI */}
       <body className="min-h-full flex flex-col font-sans">
         <Providers>
           {children}
