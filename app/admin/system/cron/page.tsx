@@ -15,6 +15,8 @@ import {
   Zap,
   Activity,
   MoreVertical,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Card,
@@ -42,10 +44,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -62,11 +61,12 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { Textarea } from '@/components/ui/textarea';
 
 interface CronJob {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   schedule: string;
   command: string;
   status: 'active' | 'inactive' | 'running' | 'failed';
@@ -79,18 +79,35 @@ interface CronJob {
   updatedAt: string;
 }
 
+const COMMAND_OPTIONS = [
+  { value: 'update-weather', label: 'Update Cuaca' },
+  { value: 'clean-sessions', label: 'Clean Sessions' },
+  { value: 'generate-reports', label: 'Generate Reports' },
+  { value: 'backup-database', label: 'Backup Database' },
+];
+
+const SCHEDULE_OPTIONS = [
+  { label: 'Setiap 6 jam', value: '0 */6 * * *' },
+  { label: 'Setiap hari jam 00:00', value: '0 0 * * *' },
+  { label: 'Setiap hari jam 01:00', value: '0 1 * * *' },
+  { label: 'Setiap jam', value: '0 * * * *' },
+  { label: 'Setiap 30 menit', value: '*/30 * * * *' },
+  { label: 'Setiap Minggu', value: '0 0 * * 0' },
+];
+
 export default function CronJobsPage() {
   const [jobs, setJobs] = useState<CronJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRunningJob, setIsRunningJob] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
   const [selectedJob, setSelectedJob] = useState<CronJob | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     schedule: '0 */6 * * *',
-    command: '',
+    command: 'update-weather',
     status: 'active',
   });
 
@@ -160,8 +177,10 @@ export default function CronJobsPage() {
         toast.success('Cron job berhasil dihapus');
         fetchJobs();
         setIsDeleteDialogOpen(false);
+        setSelectedJob(null);
       } else {
-        toast.error('Gagal menghapus cron job');
+        const error = await response.json();
+        toast.error(error.error || 'Gagal menghapus cron job');
       }
     } catch (error) {
       console.error('Error deleting cron job:', error);
@@ -182,7 +201,8 @@ export default function CronJobsPage() {
         toast.success(`Cron job ${newStatus === 'active' ? 'diaktifkan' : 'dinonaktifkan'}`);
         fetchJobs();
       } else {
-        toast.error('Gagal mengubah status cron job');
+        const error = await response.json();
+        toast.error(error.error || 'Gagal mengubah status cron job');
       }
     } catch (error) {
       console.error('Error toggling cron job:', error);
@@ -191,20 +211,27 @@ export default function CronJobsPage() {
   };
 
   const handleRunNow = async (job: CronJob) => {
+    if (isRunningJob) return;
+    
     try {
+      setIsRunningJob(job.id);
       const response = await fetch(`/api/admin/system/cron/${job.id}/run`, {
         method: 'POST',
       });
 
-      if (response.ok) {
-        toast.success('Cron job dijalankan');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || 'Cron job berhasil dijalankan');
         fetchJobs();
       } else {
-        toast.error('Gagal menjalankan cron job');
+        toast.error(data.message || data.error || 'Gagal menjalankan cron job');
       }
     } catch (error) {
       console.error('Error running cron job:', error);
-      toast.error('Terjadi kesalahan');
+      toast.error('Terjadi kesalahan saat menjalankan cron job');
+    } finally {
+      setIsRunningJob(null);
     }
   };
 
@@ -213,7 +240,7 @@ export default function CronJobsPage() {
       name: '',
       description: '',
       schedule: '0 */6 * * *',
-      command: '',
+      command: 'update-weather',
       status: 'active',
     });
     setSelectedJob(null);
@@ -223,7 +250,7 @@ export default function CronJobsPage() {
     setSelectedJob(job);
     setFormData({
       name: job.name,
-      description: job.description,
+      description: job.description || '',
       schedule: job.schedule,
       command: job.command,
       status: job.status,
@@ -232,9 +259,10 @@ export default function CronJobsPage() {
     setIsDialogOpen(true);
   };
 
-  // Fixed: Properly typed schedule change handler
-  const handleScheduleChange = (value: string | null) => {
-    setFormData({ ...formData, schedule: value || '0 */6 * * *' });
+  const openCreateDialog = () => {
+    resetForm();
+    setDialogMode('create');
+    setIsDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -253,19 +281,32 @@ export default function CronJobsPage() {
     return <Badge className={styles[status]}>{labels[status]}</Badge>;
   };
 
-  const scheduleExamples = [
-    { label: 'Setiap 6 jam', value: '0 */6 * * *' },
-    { label: 'Setiap hari jam 00:00', value: '0 0 * * *' },
-    { label: 'Setiap hari jam 01:00', value: '0 1 * * *' },
-    { label: 'Setiap jam', value: '0 * * * *' },
-    { label: 'Setiap 30 menit', value: '*/30 * * * *' },
-    { label: 'Setiap Minggu', value: '0 0 * * 0' },
-  ];
+  const getCommandLabel = (command: string) => {
+    const found = COMMAND_OPTIONS.find(c => c.value === command);
+    return found ? found.label : command;
+  };
+
+  // ============================================
+  // PERBAIKAN: Handler untuk Select dengan type string | null
+  // ============================================
+  const handleScheduleChange = (value: string | null) => {
+    setFormData({ ...formData, schedule: value || '0 */6 * * *' });
+  };
+
+  const handleCommandChange = (value: string | null) => {
+    setFormData({ ...formData, command: value || 'update-weather' });
+  };
 
   if (loading) {
     return (
       <div className="p-6 space-y-6">
-        <div className="h-10 w-48 bg-slate-200 dark:bg-slate-800 animate-pulse rounded" />
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 w-48 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+            <div className="h-4 w-64 bg-slate-200 dark:bg-slate-800 rounded mt-1 animate-pulse" />
+          </div>
+          <div className="h-10 w-32 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded-lg" />
@@ -276,8 +317,14 @@ export default function CronJobsPage() {
     );
   }
 
+  const activeJobs = jobs.filter(j => j.status === 'active').length;
+  const totalRuns = jobs.reduce((acc, j) => acc + j.runs, 0);
+  const successRate = jobs.length > 0 && totalRuns > 0
+    ? Math.round((jobs.reduce((acc, j) => acc + j.successfulRuns, 0) / totalRuns) * 100)
+    : 0;
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -287,15 +334,11 @@ export default function CronJobsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={fetchJobs}>
+          <Button variant="outline" size="sm" onClick={fetchJobs}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
           </Button>
-          <Button onClick={() => {
-            resetForm();
-            setDialogMode('create');
-            setIsDialogOpen(true);
-          }}>
+          <Button size="sm" onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
             Tambah Cron Job
           </Button>
@@ -303,60 +346,51 @@ export default function CronJobsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Total Jobs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-sky-500" />
-              <span className="text-2xl font-bold">{jobs.length}</span>
+              <span className="text-xl font-bold">{jobs.length}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Active</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-500" />
-              <span className="text-2xl font-bold">
-                {jobs.filter(j => j.status === 'active').length}
-              </span>
+              <span className="text-xl font-bold">{activeJobs}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Runs</CardTitle>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Total Runs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-blue-500" />
-              <span className="text-2xl font-bold">
-                {jobs.reduce((acc, j) => acc + j.runs, 0).toLocaleString()}
-              </span>
+              <span className="text-xl font-bold">{totalRuns.toLocaleString()}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+          <CardHeader className="pb-1">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Success Rate</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-emerald-500" />
-              <span className="text-2xl font-bold">
-                {jobs.length > 0 && jobs.reduce((acc, j) => acc + j.runs, 0) > 0
-                  ? Math.round((jobs.reduce((acc, j) => acc + j.successfulRuns, 0) / 
-                      jobs.reduce((acc, j) => acc + j.runs, 0)) * 100)
-                  : 0}%
-              </span>
+              <span className="text-xl font-bold">{successRate}%</span>
             </div>
           </CardContent>
         </Card>
@@ -367,81 +401,88 @@ export default function CronJobsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nama</TableHead>
-              <TableHead>Deskripsi</TableHead>
-              <TableHead>Schedule</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last Run</TableHead>
-              <TableHead>Next Run</TableHead>
-              <TableHead>Runs</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
+              <TableHead className="text-xs">Nama</TableHead>
+              <TableHead className="text-xs">Deskripsi</TableHead>
+              <TableHead className="text-xs">Schedule</TableHead>
+              <TableHead className="text-xs">Command</TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs">Last Run</TableHead>
+              <TableHead className="text-xs text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {jobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Belum ada cron job
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2">
+                    <Timer className="h-12 w-12 text-muted-foreground/50" />
+                    <p>Belum ada cron job</p>
+                    <p className="text-sm">Klik "Tambah Cron Job" untuk membuat tugas terjadwal</p>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               jobs.map((job) => (
-                <TableRow key={job.id}>
+                <TableRow key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Timer className="h-4 w-4 text-sky-500" />
+                      <Timer className={`h-4 w-4 ${
+                        job.status === 'active' ? 'text-green-500' : 
+                        job.status === 'failed' ? 'text-red-500' : 
+                        'text-sky-500'
+                      }`} />
                       <span className="font-medium">{job.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {job.description}
+                  <TableCell className="text-sm text-muted-foreground truncate max-w-[150px]">
+                    {job.description || '-'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="font-mono text-xs">
+                    <Badge variant="secondary" className="font-mono text-[10px]">
                       {job.schedule}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px]">
+                      {getCommandLabel(job.command)}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{getStatusBadge(job.status)}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-sm">
                     {job.lastRun ? (
-                      <span className="text-sm">
-                        {formatDistanceToNow(new Date(job.lastRun), { addSuffix: true, locale: id })}
-                      </span>
+                      formatDistanceToNow(new Date(job.lastRun), { addSuffix: true, locale: id })
                     ) : (
-                      <span className="text-sm text-muted-foreground">-</span>
+                      <span className="text-muted-foreground">-</span>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">
-                      {formatDistanceToNow(new Date(job.nextRun), { addSuffix: true, locale: id })}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-green-600">{job.successfulRuns}</span>
-                      <span className="text-muted-foreground">/</span>
-                      <span className="text-red-600">{job.failedRuns}</span>
-                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger>
                         <Button 
                           variant="ghost" 
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0" 
                           type="button"
                         >
                           <MoreVertical className="h-4 w-4" />
                           <span className="sr-only">Open menu</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                        </DropdownMenuGroup>
-                        <DropdownMenuItem onClick={() => handleRunNow(job)}>
-                          <Play className="mr-2 h-4 w-4" />
-                          Jalankan Sekarang
+                      <DropdownMenuContent align="end" className="w-52">
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                          Aksi
+                        </div>
+                        <DropdownMenuItem onClick={() => handleRunNow(job)} disabled={isRunningJob === job.id}>
+                          {isRunningJob === job.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Menjalankan...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="mr-2 h-4 w-4" />
+                              Jalankan Sekarang
+                            </>
+                          )}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleToggleStatus(job)}>
                           {job.status === 'active' ? (
@@ -460,9 +501,9 @@ export default function CronJobsPage() {
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        <div className="h-px bg-border my-1" />
                         <DropdownMenuItem 
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                           onClick={() => {
                             setSelectedJob(job);
                             setIsDeleteDialogOpen(true);
@@ -483,7 +524,7 @@ export default function CronJobsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {dialogMode === 'create' ? 'Tambah Cron Job' : 'Edit Cron Job'}
@@ -497,10 +538,10 @@ export default function CronJobsPage() {
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nama</Label>
+                <Label htmlFor="name">Nama *</Label>
                 <Input
                   id="name"
-                  placeholder="Contoh: Update Weather Data"
+                  placeholder="Contoh: Update Cuaca Otomatis"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
@@ -508,15 +549,37 @@ export default function CronJobsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Deskripsi</Label>
-                <Input
+                <Textarea
                   id="description"
-                  placeholder="Update data cuaca setiap hari jam 00:00"
+                  placeholder="Deskripsi tugas terjadwal"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={2}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="schedule">Schedule (Cron Expression)</Label>
+                <Label htmlFor="command">Command *</Label>
+                <Select 
+                  value={formData.command} 
+                  onValueChange={handleCommandChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih command" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMMAND_OPTIONS.map((cmd) => (
+                      <SelectItem key={cmd.value} value={cmd.value}>
+                        {cmd.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Pilih jenis tugas yang akan dijalankan
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="schedule">Schedule *</Label>
                 <Select 
                   value={formData.schedule} 
                   onValueChange={handleScheduleChange}
@@ -525,34 +588,16 @@ export default function CronJobsPage() {
                     <SelectValue placeholder="Pilih schedule" />
                   </SelectTrigger>
                   <SelectContent>
-                    {scheduleExamples.map((ex) => (
-                      <SelectItem key={ex.value} value={ex.value}>
-                        {ex.label} ({ex.value})
+                    {SCHEDULE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label} ({opt.value})
                       </SelectItem>
                     ))}
-                    <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
-                {formData.schedule === 'custom' && (
-                  <Input
-                    placeholder="* * * * *"
-                    value={formData.schedule}
-                    onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                  />
-                )}
                 <p className="text-xs text-muted-foreground">
                   Format: minute hour day month dayOfWeek
                 </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="command">Command</Label>
-                <Input
-                  id="command"
-                  placeholder="node scripts/update-weather.js"
-                  value={formData.command}
-                  onChange={(e) => setFormData({ ...formData, command: e.target.value })}
-                  required
-                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -570,7 +615,7 @@ export default function CronJobsPage() {
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
                 Batal
               </Button>
@@ -588,7 +633,7 @@ export default function CronJobsPage() {
           <DialogHeader>
             <DialogTitle className="text-red-600">Hapus Cron Job</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus cron job ini?
+              Apakah Anda yakin ingin menghapus cron job ini? Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
           {selectedJob && (
@@ -596,17 +641,20 @@ export default function CronJobsPage() {
               <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
                 <div className="flex items-center gap-3">
                   <Timer className="h-5 w-5 text-red-500" />
-                  <div>
-                    <p className="font-medium">{selectedJob.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedJob.description}
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{selectedJob.name}</p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {selectedJob.description || 'Tidak ada deskripsi'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Schedule: {selectedJob.schedule}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Batal
             </Button>

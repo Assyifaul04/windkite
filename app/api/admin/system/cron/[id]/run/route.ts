@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { addHours, addDays, setHours, setMinutes, setSeconds } from 'date-fns';
+import { addHours, setMinutes, setSeconds } from 'date-fns';
 
 export async function POST(
   req: NextRequest,
@@ -25,42 +25,39 @@ export async function POST(
       return NextResponse.json({ error: 'Cron job not found' }, { status: 404 });
     }
 
-    // Execute command berdasarkan tipe
+    console.log(`🔄 Executing cron job: ${job.name} (${job.command})`);
+
     let success = false;
     let result = '';
+    let details = '';
 
     try {
-      switch (job.command) {
-        case 'node scripts/update-weather.js':
-        case 'npm run update-weather':
-          result = await executeWeatherUpdate();
-          success = true;
-          break;
-        case 'node scripts/clean-sessions.js':
-        case 'npm run clean-sessions':
-          result = await executeSessionCleanup();
-          success = true;
-          break;
-        case 'node scripts/generate-reports.js':
-        case 'npm run generate-reports':
-          result = await executeReportGeneration();
-          success = true;
-          break;
-        default:
-          // Untuk command lain, coba eksekusi dengan child_process
-          try {
-            const { exec } = await import('child_process');
-            const { promisify } = await import('util');
-            const execPromise = promisify(exec);
-            
-            const { stdout, stderr } = await execPromise(job.command);
-            result = stdout || stderr || 'Command executed successfully';
-            success = true;
-          } catch (execError) {
-            console.error('Command execution error:', execError);
-            result = execError instanceof Error ? execError.message : 'Unknown execution error';
-            success = false;
-          }
+      const command = job.command.toLowerCase();
+      
+      // Weather update
+      if (command === 'update-weather' || command.includes('weather')) {
+        const weatherResult = await executeWeatherUpdate();
+        success = weatherResult.success;
+        result = weatherResult.message;
+        details = weatherResult.details || '';
+      } 
+      // Session cleanup
+      else if (command === 'clean-sessions' || command.includes('clean')) {
+        const sessionResult = await executeSessionCleanup();
+        success = sessionResult.success;
+        result = sessionResult.message;
+        details = sessionResult.details || '';
+      } 
+      // Report generation
+      else if (command === 'generate-reports' || command.includes('report')) {
+        const reportResult = await executeReportGeneration();
+        success = reportResult.success;
+        result = reportResult.message;
+        details = reportResult.details || '';
+      } 
+      else {
+        result = `Unknown command: ${job.command}`;
+        success = false;
       }
     } catch (error) {
       console.error('Error executing cron job:', error);
@@ -68,7 +65,7 @@ export async function POST(
       success = false;
     }
 
-    // Update statistik
+    // Update job statistics
     const updateData: any = {
       lastRun: new Date(),
       runs: { increment: 1 },
@@ -81,7 +78,6 @@ export async function POST(
       updateData.failedRuns = { increment: 1 };
     }
 
-    // Recalculate next run
     updateData.nextRun = calculateNextRun(job.schedule);
 
     const updatedJob = await prisma.cronJob.update({
@@ -93,72 +89,158 @@ export async function POST(
       success,
       message: success ? 'Cron job executed successfully' : 'Cron job execution failed',
       result,
+      details: details || undefined,
       timestamp: new Date().toISOString(),
       job: updatedJob,
     });
   } catch (error) {
     console.error('Error running cron job:', error);
     return NextResponse.json(
-      { error: 'Failed to run cron job' },
+      { error: 'Failed to run cron job', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
 }
 
-// Helper functions untuk command
-async function executeWeatherUpdate(): Promise<string> {
+// Weather update execution - FIXED baseUrl
+async function executeWeatherUpdate(): Promise<{ success: boolean; message: string; details?: string }> {
   try {
-    // Panggil API internal untuk update weather
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://windkite.vercel.app';
-    const response = await fetch(`${baseUrl}/api/cron/update-weather`);
+    // FIX: Use proper base URL
+    let baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL;
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // If still undefined, use localhost for development
+    if (!baseUrl) {
+      baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://your-domain.com' // Ganti dengan domain produksi Anda
+        : 'http://localhost:3000';
     }
     
+    // Remove trailing slash if exists
+    baseUrl = baseUrl.replace(/\/$/, '');
+    
+    const cronSecret = process.env.CRON_SECRET || 'your-secret-key';
+    
+    console.log(`🌐 Calling weather update API at: ${baseUrl}/api/cron/update-weather`);
+    
+    const response = await fetch(`${baseUrl}/api/cron/update-weather`, {
+      headers: {
+        'Authorization': `Bearer ${cronSecret}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+
     const data = await response.json();
-    return `Weather update completed: ${data.message || 'Success'}`;
+    
+    return {
+      success: true,
+      message: data.message || 'Weather update completed successfully',
+      details: `Updated ${data.updatedCount || 0} locations, ${data.errorCount || 0} errors`,
+    };
   } catch (error) {
     console.error('Weather update error:', error);
-    throw new Error(`Failed to update weather: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return {
+      success: false,
+      message: `Failed to update weather: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: error instanceof Error ? error.stack : undefined,
+    };
   }
 }
 
-async function executeSessionCleanup(): Promise<string> {
+// Session cleanup execution - FIXED baseUrl
+async function executeSessionCleanup(): Promise<{ success: boolean; message: string; details?: string }> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://windkite.vercel.app';
-    const response = await fetch(`${baseUrl}/api/cron/clean-sessions`);
+    let baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL;
     
+    if (!baseUrl) {
+      baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://your-domain.com'
+        : 'http://localhost:3000';
+    }
+    
+    baseUrl = baseUrl.replace(/\/$/, '');
+    
+    const cronSecret = process.env.CRON_SECRET || 'your-secret-key';
+    
+    console.log(`🌐 Calling clean sessions API at: ${baseUrl}/api/cron/clean-sessions`);
+    
+    const response = await fetch(`${baseUrl}/api/cron/clean-sessions`, {
+      headers: {
+        'Authorization': `Bearer ${cronSecret}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
-    return `Session cleanup completed: ${data.message || 'Success'}`;
+    return {
+      success: true,
+      message: data.message || 'Session cleanup completed',
+      details: `Deleted ${data.deletedCount || 0} sessions`,
+    };
   } catch (error) {
     console.error('Session cleanup error:', error);
-    throw new Error(`Failed to clean sessions: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return {
+      success: false,
+      message: `Failed to clean sessions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: error instanceof Error ? error.stack : undefined,
+    };
   }
 }
 
-async function executeReportGeneration(): Promise<string> {
+// Report generation execution - FIXED baseUrl
+async function executeReportGeneration(): Promise<{ success: boolean; message: string; details?: string }> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://windkite.vercel.app';
-    const response = await fetch(`${baseUrl}/api/cron/generate-reports`);
+    let baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL;
     
+    if (!baseUrl) {
+      baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://your-domain.com'
+        : 'http://localhost:3000';
+    }
+    
+    baseUrl = baseUrl.replace(/\/$/, '');
+    
+    const cronSecret = process.env.CRON_SECRET || 'your-secret-key';
+    
+    console.log(`🌐 Calling generate reports API at: ${baseUrl}/api/cron/generate-reports`);
+    
+    const response = await fetch(`${baseUrl}/api/cron/generate-reports`, {
+      headers: {
+        'Authorization': `Bearer ${cronSecret}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
-    return `Report generation completed: ${data.message || 'Success'}`;
+    return {
+      success: true,
+      message: data.message || 'Report generation completed',
+      details: `Report generated at ${data.timestamp || new Date().toISOString()}`,
+    };
   } catch (error) {
     console.error('Report generation error:', error);
-    throw new Error(`Failed to generate reports: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    return {
+      success: false,
+      message: `Failed to generate reports: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      details: error instanceof Error ? error.stack : undefined,
+    };
   }
 }
 
-// Updated: Better schedule calculation with daily support
 function calculateNextRun(schedule: string): Date {
   const now = new Date();
   const parts = schedule.trim().split(' ');
@@ -168,15 +250,12 @@ function calculateNextRun(schedule: string): Date {
   }
 
   const [minute, hour, day, month, dayOfWeek] = parts;
-  
   let nextRun = new Date(now);
   nextRun = setSeconds(nextRun, 0);
   
-  // Check for common patterns
-  // Pattern: "0 0 * * *" (daily at midnight - for weather update)
+  // Daily at midnight: "0 0 * * *"
   if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = new Date(now);
-    // If current time is after midnight, set to next midnight
     if (now.getHours() >= 0 && now.getMinutes() > 0) {
       nextRun.setDate(now.getDate() + 1);
     }
@@ -184,7 +263,7 @@ function calculateNextRun(schedule: string): Date {
     return nextRun;
   }
   
-  // Pattern: "0 */6 * * *" (every 6 hours)
+  // Every 6 hours: "0 */6 * * *"
   if (minute === '0' && hour === '*/6' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = addHours(now, 6);
     nextRun = setMinutes(nextRun, 0);
@@ -192,46 +271,11 @@ function calculateNextRun(schedule: string): Date {
     return nextRun;
   }
   
-  // Pattern: "0 1 * * *" (daily at 1 AM)
-  if (minute === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
-    const hourNum = parseInt(hour);
-    if (!isNaN(hourNum)) {
-      nextRun = new Date(now);
-      if (now.getHours() >= hourNum) {
-        nextRun.setDate(now.getDate() + 1);
-      }
-      nextRun.setHours(hourNum, 0, 0, 0);
-      return nextRun;
-    }
-  }
-  
-  // Pattern: "0 * * * *" (every hour)
+  // Every hour: "0 * * * *"
   if (minute === '0' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = addHours(now, 1);
     nextRun = setMinutes(nextRun, 0);
     nextRun = setSeconds(nextRun, 0);
-    return nextRun;
-  }
-  
-  // Pattern: "*/30 * * * *" (every 30 minutes)
-  if (minute === '*/30' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
-    const minutes = now.getMinutes();
-    const nextMinutes = minutes < 30 ? 30 : 60;
-    nextRun = new Date(now);
-    nextRun.setMinutes(nextMinutes, 0, 0);
-    if (nextMinutes === 60) {
-      nextRun.setHours(now.getHours() + 1);
-      nextRun.setMinutes(0, 0, 0);
-    }
-    return nextRun;
-  }
-  
-  // Pattern: "0 0 * * 0" (every Sunday at midnight)
-  if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '0') {
-    const daysUntilSunday = (7 - now.getDay()) % 7 || 7;
-    nextRun = new Date(now);
-    nextRun.setDate(now.getDate() + daysUntilSunday);
-    nextRun.setHours(0, 0, 0, 0);
     return nextRun;
   }
   

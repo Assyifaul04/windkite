@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { addHours, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
+import { addHours, setMinutes, setSeconds } from 'date-fns';
 
 export async function GET() {
   try {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     
-    // Validate required fields
+    // Validasi
     if (!body.name || !body.schedule || !body.command) {
       return NextResponse.json(
         { error: 'Name, schedule, and command are required' },
@@ -43,11 +43,15 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Calculate next run time
+    // Generate ID unik
+    const id = `cron_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    // Hitung next run
     const nextRun = calculateNextRun(body.schedule);
     
     const job = await prisma.cronJob.create({
       data: {
+        id: id,
         name: body.name,
         description: body.description || '',
         schedule: body.schedule,
@@ -57,6 +61,8 @@ export async function POST(req: NextRequest) {
         runs: 0,
         successfulRuns: 0,
         failedRuns: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     });
 
@@ -64,13 +70,12 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error creating cron job:', error);
     return NextResponse.json(
-      { error: 'Failed to create cron job' },
+      { error: 'Failed to create cron job', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
 }
 
-// Helper untuk menghitung nextRun dari cron expression
 function calculateNextRun(schedule: string): Date {
   const now = new Date();
   const parts = schedule.trim().split(' ');
@@ -80,87 +85,37 @@ function calculateNextRun(schedule: string): Date {
   }
 
   const [minute, hour, day, month, dayOfWeek] = parts;
-  
   let nextRun = new Date(now);
-  
-  // Set detik ke 0
   nextRun = setSeconds(nextRun, 0);
   nextRun = setMinutes(nextRun, 0);
   
-  // Pattern: "0 */6 * * *" (setiap 6 jam)
+  // Setiap 6 jam: "0 */6 * * *"
   if (minute === '0' && hour === '*/6' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = addHours(now, 6);
     nextRun = setMinutes(nextRun, 0);
     nextRun = setSeconds(nextRun, 0);
+    return nextRun;
   }
-  // Pattern: "0 0 * * *" (setiap hari jam 00:00)
-  else if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
+  
+  // Setiap hari jam 00:00: "0 0 * * *"
+  if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = new Date(now);
     nextRun.setDate(now.getDate() + 1);
     nextRun.setHours(0, 0, 0, 0);
+    return nextRun;
   }
-  // Pattern: "0 * * * *" (setiap jam)
-  else if (minute === '0' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
+  
+  // Setiap jam: "0 * * * *"
+  if (minute === '0' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
     nextRun = addHours(now, 1);
     nextRun = setMinutes(nextRun, 0);
     nextRun = setSeconds(nextRun, 0);
-  }
-  // Pattern: "*/30 * * * *" (setiap 30 menit)
-  else if (minute === '*/30' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
-    const minutes = now.getMinutes();
-    const nextMinutes = minutes < 30 ? 30 : 60;
-    nextRun = new Date(now);
-    nextRun.setMinutes(nextMinutes, 0, 0);
-    if (nextMinutes === 60) {
-      nextRun.setHours(now.getHours() + 1);
-      nextRun.setMinutes(0, 0, 0);
-    }
-  }
-  // Pattern: "0 0 * * 0" (setiap Minggu)
-  else if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '0') {
-    const daysUntilSunday = (7 - now.getDay()) % 7 || 7;
-    nextRun = new Date(now);
-    nextRun.setDate(now.getDate() + daysUntilSunday);
-    nextRun.setHours(0, 0, 0, 0);
-  }
-  // Custom pattern - try to parse
-  else {
-    // Try to parse minute
-    let minutesOffset = 0;
-    let hoursOffset = 0;
-    let daysOffset = 0;
-    
-    if (minute !== '*' && !minute.startsWith('*/')) {
-      const min = parseInt(minute);
-      if (!isNaN(min) && min > now.getMinutes()) {
-        minutesOffset = min - now.getMinutes();
-      } else if (!isNaN(min)) {
-        hoursOffset = 1;
-        minutesOffset = min - now.getMinutes() + 60;
-      }
-    }
-    
-    if (hour !== '*' && !hour.startsWith('*/')) {
-      const hr = parseInt(hour);
-      if (!isNaN(hr) && hr > now.getHours()) {
-        hoursOffset = hr - now.getHours();
-      } else if (!isNaN(hr)) {
-        daysOffset = 1;
-        hoursOffset = hr - now.getHours() + 24;
-      }
-    }
-    
-    nextRun = new Date(now);
-    nextRun.setHours(now.getHours() + hoursOffset);
-    nextRun.setMinutes(now.getMinutes() + minutesOffset);
-    nextRun.setSeconds(0);
-    nextRun.setDate(now.getDate() + daysOffset);
+    return nextRun;
   }
   
-  // Ensure nextRun is in the future
-  if (nextRun <= now) {
-    nextRun = addHours(now, 6);
-  }
-  
+  // Default: 6 jam dari sekarang
+  nextRun = addHours(now, 6);
+  nextRun = setMinutes(nextRun, 0);
+  nextRun = setSeconds(nextRun, 0);
   return nextRun;
 }

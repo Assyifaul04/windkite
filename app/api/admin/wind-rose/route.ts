@@ -33,6 +33,11 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // If no data, return empty array
+    if (logs.length === 0) {
+      return NextResponse.json([]);
+    }
+
     // Group by direction (rounded to nearest 10 degrees)
     const directionGroups = new Map();
     logs.forEach(log => {
@@ -56,11 +61,14 @@ export async function GET(req: NextRequest) {
       count: group.count,
     }));
 
+    // Sort by direction
+    windRoseData.sort((a, b) => a.direction - b.direction);
+
     return NextResponse.json(windRoseData);
   } catch (error) {
     console.error('Error fetching wind rose:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch wind rose data' },
+      { error: 'Failed to fetch wind rose data', details: String(error) },
       { status: 500 }
     );
   }

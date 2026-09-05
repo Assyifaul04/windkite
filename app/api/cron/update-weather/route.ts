@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { addHours } from 'date-fns';
-import { KiteSuitability } from '@prisma/client'; // Import the enum type
+import { KiteSuitability } from '@prisma/client';
 
 // Verifikasi secret untuk keamanan
 const CRON_SECRET = process.env.CRON_SECRET || 'your-secret-key';
@@ -11,15 +11,26 @@ export async function GET(req: Request) {
   try {
     // Verifikasi authorization
     const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      // Untuk Vercel Cron Jobs, verifikasi dengan header x-vercel-cron
-      const isVercelCron = req.headers.get('x-vercel-cron') === 'true';
-      if (!isVercelCron) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    const isVercelCron = req.headers.get('x-vercel-cron') === 'true';
+    
+    if (!isVercelCron && authHeader !== `Bearer ${CRON_SECRET}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     console.log('🔄 Starting weather update cron job...');
+
+    // === PERBAIKAN: Ambil API Key dari database ===
+    const weatherSettings = await prisma.weatherSettings.findFirst();
+    
+    if (!weatherSettings || !weatherSettings.apiKey) {
+      console.error('❌ Weather API Key not configured in database');
+      return NextResponse.json(
+        { error: 'Weather API Key not configured. Please set it in Settings > Weather API' },
+        { status: 400 }
+      );
+    }
+
+    const API_KEY = weatherSettings.apiKey;
 
     // Get all locations
     const locations = await prisma.savedLocation.findMany({
@@ -31,65 +42,118 @@ export async function GET(req: Request) {
       },
     });
 
+    if (locations.length === 0) {
+      console.log('⚠️ No locations found to update');
+      return NextResponse.json({
+        success: true,
+        message: 'No locations to update',
+        updatedCount: 0,
+        errorCount: 0,
+      });
+    }
+
     let updatedCount = 0;
     let errorCount = 0;
+    const errors: string[] = [];
 
     // Update weather data for each location
     for (const location of locations) {
       try {
-        // Fetch weather data from API
-        const weatherData = await fetchWeatherData(location.latitude, location.longitude);
+        const weatherData = await fetchWeatherData(
+          location.latitude,
+          location.longitude,
+          API_KEY
+        );
         
-        // Save to database
-        await prisma.weatherLog.create({
-          data: {
+        // Cek apakah sudah ada data hari ini
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const existingLog = await prisma.weatherLog.findFirst({
+          where: {
             locationId: location.id,
-            windSpeed: weatherData.windSpeed,
-            windGust: weatherData.windGust || weatherData.windSpeed * 1.3,
-            windDirection: weatherData.windDirection,
-            temperature: weatherData.temperature,
-            humidity: weatherData.humidity,
-            kiteSuitability: calculateKiteSuitability(weatherData.windSpeed),
-            userId: null, // System update
+            timestamp: {
+              gte: today,
+            },
           },
         });
+
+        if (existingLog) {
+          // Update data yang sudah ada
+          await prisma.weatherLog.update({
+            where: { id: existingLog.id },
+            data: {
+              windSpeed: weatherData.windSpeed,
+              windGust: weatherData.windGust || weatherData.windSpeed * 1.3,
+              windDirection: weatherData.windDirection,
+              temperature: weatherData.temperature,
+              humidity: weatherData.humidity,
+              kiteSuitability: calculateKiteSuitability(weatherData.windSpeed),
+            },
+          });
+        } else {
+          // Buat data baru
+          await prisma.weatherLog.create({
+            data: {
+              locationId: location.id,
+              windSpeed: weatherData.windSpeed,
+              windGust: weatherData.windGust || weatherData.windSpeed * 1.3,
+              windDirection: weatherData.windDirection,
+              temperature: weatherData.temperature,
+              humidity: weatherData.humidity,
+              kiteSuitability: calculateKiteSuitability(weatherData.windSpeed),
+              userId: null, // System update
+            },
+          });
+        }
 
         updatedCount++;
         console.log(`✅ Updated weather for ${location.name}`);
       } catch (error) {
         errorCount++;
-        console.error(`❌ Failed to update ${location.name}:`, error);
+        const errorMsg = `Failed to update ${location.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error(`❌ ${errorMsg}`);
       }
     }
 
-    // Update cron job status
-    await updateCronJobStatus('1', true, updatedCount);
+    // Update cron job status - cari berdasarkan command
+    await updateCronJobStatus('update-weather', errorCount === 0, updatedCount);
 
     return NextResponse.json({
       success: true,
       message: `Updated ${updatedCount} locations, ${errorCount} errors`,
+      updatedCount,
+      errorCount,
+      errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Cron job failed:', error);
     
-    // Update cron job status as failed
-    await updateCronJobStatus('1', false, 0);
+    await updateCronJobStatus('update-weather', false, 0);
     
     return NextResponse.json(
-      { error: 'Cron job failed' },
+      { 
+        error: 'Cron job failed', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      },
       { status: 500 }
     );
   }
 }
 
-async function fetchWeatherData(lat: number, lng: number) {
-  // Implementasi fetch weather data dari API
-  // Contoh menggunakan OpenWeatherMap atau WeatherAPI
-  const API_KEY = process.env.WEATHER_API_KEY;
-  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${API_KEY}&units=metric`;
+async function fetchWeatherData(lat: number, lng: number, apiKey: string) {
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${apiKey}&units=metric`;
   
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: { 'Accept': 'application/json' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
   const data = await response.json();
   
   return {
@@ -101,7 +165,6 @@ async function fetchWeatherData(lat: number, lng: number) {
   };
 }
 
-// Fix: Return KiteSuitability enum type instead of string
 function calculateKiteSuitability(windSpeed: number): KiteSuitability {
   if (windSpeed < 5) return KiteSuitability.TIDAK_LAYAK;
   if (windSpeed < 15) return KiteSuitability.RINGAN;
@@ -110,10 +173,20 @@ function calculateKiteSuitability(windSpeed: number): KiteSuitability {
   return KiteSuitability.TIDAK_LAYAK;
 }
 
-async function updateCronJobStatus(jobId: string, success: boolean, runs: number) {
+async function updateCronJobStatus(command: string, success: boolean, runs: number) {
   try {
+    // Cari cron job berdasarkan command
+    const job = await prisma.cronJob.findFirst({
+      where: { command: { contains: command } },
+    });
+
+    if (!job) {
+      console.log(`⚠️ Cron job with command "${command}" not found, skipping status update`);
+      return;
+    }
+
     await prisma.cronJob.update({
-      where: { id: jobId },
+      where: { id: job.id },
       data: {
         lastRun: new Date(),
         nextRun: addHours(new Date(), 6),
