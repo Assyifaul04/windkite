@@ -73,7 +73,77 @@ export async function GET(
   }
 }
 
-// PUT - Update frame (partial update allowed)
+// PATCH - Partial update (untuk status change dan field lainnya)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+
+    const updateData: any = {};
+
+    // Handle status update - otomatis set isPublic
+    if (body.status !== undefined) {
+      updateData.status = body.status;
+      
+      // Jika status menjadi PUBLISHED, otomatis isPublic = true
+      if (body.status === 'PUBLISHED') {
+        updateData.isPublic = true;
+      }
+      // Jika status menjadi DRAFT atau ARCHIVED, isPublic = false
+      else if (body.status === 'DRAFT' || body.status === 'ARCHIVED') {
+        updateData.isPublic = false;
+      }
+    }
+
+    // Handle field updates lainnya
+    if (body.name !== undefined) updateData.name = body.name;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
+    if (body.thumbnailUrl !== undefined) updateData.thumbnailUrl = body.thumbnailUrl;
+    if (body.canvasWidth !== undefined) updateData.canvasWidth = body.canvasWidth;
+    if (body.canvasHeight !== undefined) updateData.canvasHeight = body.canvasHeight;
+    if (body.isPublic !== undefined) updateData.isPublic = body.isPublic;
+    if (body.markerData !== undefined) updateData.markerData = body.markerData;
+    if (body.clipPathSvg !== undefined) updateData.clipPathSvg = body.clipPathSvg;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
+    }
+
+    const frame = await prisma.kiteFrame.update({
+      where: { id },
+      data: updateData,
+      include: {
+        _count: {
+          select: {
+            designs: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(frame);
+  } catch (error) {
+    console.error('Error updating frame:', error);
+    return NextResponse.json(
+      { error: 'Failed to update frame', details: String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Full update (kompatibilitas)
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -87,41 +157,31 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    // Build update data dynamically - only include fields that are provided
     const updateData: any = {};
 
-    // Only add fields if they exist in the request body
     if (body.name !== undefined) updateData.name = body.name;
     if (body.description !== undefined) updateData.description = body.description;
     if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
     if (body.thumbnailUrl !== undefined) updateData.thumbnailUrl = body.thumbnailUrl;
     if (body.canvasWidth !== undefined) updateData.canvasWidth = body.canvasWidth;
     if (body.canvasHeight !== undefined) updateData.canvasHeight = body.canvasHeight;
+    
+    if (body.status !== undefined) {
+      updateData.status = body.status;
+      if (body.status === 'PUBLISHED') {
+        updateData.isPublic = true;
+      } else if (body.status === 'DRAFT' || body.status === 'ARCHIVED') {
+        updateData.isPublic = false;
+      }
+    }
+    
     if (body.isPublic !== undefined) updateData.isPublic = body.isPublic;
     if (body.markerData !== undefined) updateData.markerData = body.markerData;
     if (body.clipPathSvg !== undefined) updateData.clipPathSvg = body.clipPathSvg;
-    if (body.status !== undefined) updateData.status = body.status;
 
-    // If no data to update, return error
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
         { error: 'No fields to update' },
-        { status: 400 }
-      );
-    }
-
-    // For partial updates, we don't require name and imageUrl
-    // Only validate if they are being updated
-    if (body.name !== undefined && !body.name?.trim()) {
-      return NextResponse.json(
-        { error: 'Name cannot be empty' },
-        { status: 400 }
-      );
-    }
-
-    if (body.imageUrl !== undefined && !body.imageUrl) {
-      return NextResponse.json(
-        { error: 'ImageUrl cannot be empty' },
         { status: 400 }
       );
     }

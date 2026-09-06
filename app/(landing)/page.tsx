@@ -1,5 +1,6 @@
 // app/(landing)/page.tsx
 import WeatherWidget from '@/components/landing/WeatherWidget';
+import FeaturesKite from '@/components/landing/FeaturesKite';
 
 export default function LandingPage() {
   return (
@@ -18,6 +19,9 @@ export default function LandingPage() {
           <WeatherWidget />
         </div>
       </section>
+
+      {/* Features Kite Section */}
+      <FeaturesKite limit={6} />
     </div>
   );
 }

@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { MapPin, Search, ArrowUp, Sun, Cloud, Wind, Loader2, AlertCircle, X } from 'lucide-react';
+import { MapPin, Search, ArrowUp, Sun, Cloud, Wind, Loader2, AlertCircle, X, Droplets, Thermometer, Compass, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ==========================================
 // Interface Data
@@ -92,35 +93,30 @@ const fallbackData: WeatherResponse = {
 
 // Skeleton Loading Component
 const WeatherSkeleton = ({ isDark }: { isDark: boolean }) => (
-  <div className="w-full animate-pulse space-y-6">
-    {/* Top Section Skeleton */}
-    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-      <div className="flex items-center gap-4">
-        <div className={`w-16 h-16 rounded-full ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
-        <div className="space-y-2">
-          <div className={`h-12 w-24 rounded-lg ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
-          <div className={`h-4 w-48 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+  <div className="w-full animate-pulse space-y-4">
+    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+      <div className="flex items-center gap-3">
+        <div className={`w-12 h-12 rounded-full ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+        <div className="space-y-1.5">
+          <div className={`h-8 w-20 rounded-lg ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+          <div className={`h-3 w-36 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
         </div>
       </div>
-      <div className="flex flex-col items-end gap-2">
-        <div className={`h-6 w-20 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+      <div className="flex flex-col items-end gap-1.5">
         <div className={`h-4 w-16 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+        <div className={`h-3 w-12 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
       </div>
     </div>
-
-    {/* Chart Skeleton */}
-    <div className="space-y-4">
-      <div className={`h-4 w-32 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
-      <div className={`h-36 w-full rounded-xl ${isDark ? 'bg-zinc-800' : 'bg-zinc-100'}`} />
+    <div className="space-y-3">
+      <div className={`h-3 w-24 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+      <div className={`h-28 w-full rounded-xl ${isDark ? 'bg-zinc-800' : 'bg-zinc-100'}`} />
     </div>
-
-    {/* Daily Skeleton */}
-    <div className="flex justify-between gap-2">
+    <div className="flex justify-between gap-1.5">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex flex-col items-center gap-3 w-16">
-          <div className={`h-4 w-10 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
-          <div className={`h-8 w-8 rounded-full ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
-          <div className={`h-4 w-12 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+        <div key={i} className="flex flex-col items-center gap-2 w-12">
+          <div className={`h-3 w-8 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+          <div className={`h-6 w-6 rounded-full ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
+          <div className={`h-3 w-10 rounded ${isDark ? 'bg-zinc-700' : 'bg-zinc-200'}`} />
         </div>
       ))}
     </div>
@@ -164,7 +160,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   const [loadingWeather, setLoadingWeather] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. Ambil daftar lokasi publik
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -189,7 +184,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
     return () => { cancelled = true; };
   }, []);
 
-  // 2. Ambil data cuaca
   useEffect(() => {
     if (!selectedId) return;
     let cancelled = false;
@@ -217,7 +211,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
     return () => { cancelled = true; };
   }, [selectedId]);
 
-  // Filter lokasi berdasarkan pencarian
   const filteredLocations = useMemo(() => {
     return locations.filter(loc => 
       loc.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -226,15 +219,12 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
   const weatherData = data || fallbackData;
   
-  // Chart colors - Blue theme
   const chartColors = isDark
     ? { line: '#60a5fa', fillFrom: 'rgba(96,165,250,0.35)', fillTo: 'rgba(96,165,250,0)', grid: 'rgba(255,255,255,0.08)', axis: '#9ca3af', now: '#93c5fd' }
     : { line: '#2563eb', fillFrom: 'rgba(37,99,235,0.20)', fillTo: 'rgba(37,99,235,0)', grid: 'rgba(0,0,0,0.08)', axis: '#71717a', now: '#4f46e5' };
 
-  // Get hourly data - make sure it's in chronological order (oldest to newest)
   const hourlyData = useMemo(() => {
     if (!weatherData?.hourly) return [];
-    // Sort by timestamp if available, otherwise keep as is
     return [...weatherData.hourly].sort((a, b) => {
       if (a.timestamp && b.timestamp) {
         return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
@@ -248,9 +238,9 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
     if (hourly.length === 0) return null;
 
     const width = 700;
-    const height = 150;
-    const padTop = 20;
-    const padBottom = 10;
+    const height = 130;
+    const padTop = 16;
+    const padBottom = 8;
 
     const speeds = hourly.map((h) => h.windSpeed);
     const min = Math.min(...speeds, 0);
@@ -265,7 +255,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
     const linePath = buildSmoothPath(points);
     const areaPath = points.length > 0 ? `${linePath} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z` : '';
-    // Show all points if less than 8, otherwise show evenly spaced
     const markerIdx = hourly.length <= 8 
       ? Array.from({ length: hourly.length }, (_, i) => i)
       : evenlySpacedIndices(hourly.length, 8);
@@ -278,139 +267,224 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   const isCloudyNow = (weatherData?.current.humidity ?? 0) > 70;
 
   return (
-    <div className={`flex-1 flex flex-col items-center w-full bg-white dark:bg-black text-zinc-900 dark:text-white min-h-screen px-4 py-8 md:py-12 font-sans transition-colors ${className}`}>
+    <div className={`flex-1 flex flex-col items-center w-full bg-white dark:bg-black text-zinc-900 dark:text-white min-h-screen px-3 py-4 md:py-8 font-sans transition-colors ${className}`}>
       
-      {/* Region Selector dengan Search Dropdown */}
-      <div className="max-w-3xl w-full mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
-          <MapPin className="w-5 h-5 text-blue-500" />
-          <span className="text-sm font-medium">Lokasi Pantauan:</span>
-        </div>
-
-        <div className="relative w-full md:w-72">
-          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-full px-4 py-2">
-            {loadingLocations ? (
-              <Loader2 className="w-4 h-4 text-blue-500 animate-spin mr-2" />
-            ) : (
-              <Search className="w-4 h-4 text-blue-500 mr-2" />
-            )}
-            <input
-              type="text"
-              placeholder="Cari lokasi..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
-              onFocus={() => setShowDropdown(true)}
-              className="bg-transparent outline-none w-full text-sm text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
-                <X className="w-4 h-4" />
-              </button>
-            )}
+      {/* Header Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-4xl w-full mb-6"
+      >
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-blue-500/10 rounded-lg">
+              <MapPin className="w-4 h-4 text-blue-500" />
+            </div>
+            <div>
+              <h3 className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Lokasi Pantauan</h3>
+              <div className="flex items-center gap-2">
+                <span className="text-base font-semibold text-zinc-900 dark:text-white">
+                  {weatherData?.location?.name || 'Memuat...'}
+                </span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  {weatherData?.location?.latitude?.toFixed(2)}, {weatherData?.location?.longitude?.toFixed(2)}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {showDropdown && (
-            <div className="absolute z-20 mt-2 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto">
-              {filteredLocations.length > 0 ? (
-                filteredLocations.map((loc) => (
-                  <button
-                    key={loc.id}
-                    onClick={() => {
-                      setSelectedId(loc.id);
-                      setSearchQuery(loc.name.split('(')[0].trim());
-                      setShowDropdown(false);
-                    }}
-                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors ${
-                      selectedId === loc.id ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold' : ''
-                    }`}
-                  >
-                    {loc.name}
-                  </button>
-                ))
+          {/* Search Dropdown */}
+          <div className="relative w-full md:w-64">
+            <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all duration-200">
+              {loadingLocations ? (
+                <Loader2 className="w-3.5 h-3.5 text-blue-500 animate-spin mr-2" />
               ) : (
-                <div className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">
-                  Lokasi tidak ditemukan.
-                </div>
+                <Search className="w-3.5 h-3.5 text-zinc-400 mr-2" />
+              )}
+              <input
+                type="text"
+                placeholder="Cari lokasi..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                className="bg-transparent outline-none w-full text-sm text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')} 
+                  className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Notifikasi jika lokasi tidak tersedia di database */}
-      {locations.length === 0 && !loadingLocations && (
-        <div className="max-w-3xl w-full mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-          <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-          <div className="text-sm text-blue-800 dark:text-blue-200">
-            <p className="font-semibold">Lokasi belum tersedia di database.</p>
-            <p className="mt-1">Saat ini Anda melihat data default <b>Jember</b>. Silakan hubungi admin untuk menambahkan lokasi Anda.</p>
+            <AnimatePresence>
+              {showDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute z-20 mt-1 w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-2xl overflow-hidden max-h-52 overflow-y-auto"
+                >
+                  {filteredLocations.length > 0 ? (
+                    filteredLocations.map((loc) => (
+                      <button
+                        key={loc.id}
+                        onClick={() => {
+                          setSelectedId(loc.id);
+                          setSearchQuery(loc.name.split('(')[0].trim());
+                          setShowDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between ${
+                          selectedId === loc.id ? 'bg-blue-50 dark:bg-blue-900/20 font-medium text-blue-600 dark:text-blue-400' : ''
+                        }`}
+                      >
+                        <span>{loc.name}</span>
+                        {selectedId === loc.id && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-3 text-sm text-zinc-500 dark:text-zinc-400 text-center">
+                      Lokasi tidak ditemukan
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
+      </motion.div>
+
+      {/* Notifikasi */}
+      {locations.length === 0 && !loadingLocations && (
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="max-w-4xl w-full mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start gap-2"
+        >
+          <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-blue-800 dark:text-blue-200">
+            <p className="font-semibold">Lokasi belum tersedia di database.</p>
+            <p className="mt-0.5">Saat ini Anda melihat data default <b>Jember</b>.</p>
+          </div>
+        </motion.div>
       )}
 
       {/* Main Weather Widget Box */}
-      <div className="max-w-3xl w-full bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-xl dark:shadow-2xl border border-zinc-200 dark:border-zinc-800 transition-colors relative overflow-hidden">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+        className="max-w-4xl w-full bg-white dark:bg-zinc-900/80 rounded-2xl p-5 md:p-6 shadow-2xl shadow-blue-500/5 dark:shadow-blue-500/10 border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm transition-colors relative overflow-hidden"
+      >
+        {/* Decorative gradient blob */}
+        <div className="absolute -top-20 -right-20 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
         {error && (
-          <div className="flex items-center gap-2 text-red-500 text-sm mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-2 text-red-500 text-sm mb-3">
             <AlertCircle className="w-4 h-4" /> {error}
           </div>
         )}
 
         {loadingWeather && !error && (
-          <div className="py-8">
+          <div className="py-3">
             <WeatherSkeleton isDark={isDark} />
           </div>
         )}
 
         {!loadingWeather && weatherData && !error && (
-          <div className="animate-in fade-in duration-500">
+          <div className="relative z-10">
             {/* Top Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div className="flex items-center gap-4 flex-wrap">
-                <div className="w-16 h-16 bg-yellow-400 rounded-full flex items-center justify-center blur-[1px] shadow-[0_0_15px_rgba(250,204,21,0.4)] shrink-0">
-                  {isCloudyNow ? (
-                    <Cloud className="w-9 h-9 text-yellow-50 fill-zinc-100 dark:fill-zinc-300" />
-                  ) : (
-                    <Sun className="w-10 h-10 text-yellow-100 fill-yellow-200" />
-                  )}
+                {/* Weather Icon */}
+                <div className="relative">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-400/20 to-orange-400/20 flex items-center justify-center">
+                    {isCloudyNow ? (
+                      <Cloud className="w-8 h-8 text-zinc-400 dark:text-zinc-300" />
+                    ) : (
+                      <Sun className="w-8 h-8 text-yellow-400 fill-yellow-400/30" />
+                    )}
+                  </div>
+                  <div className="absolute -inset-1 bg-yellow-400/20 rounded-xl blur-lg -z-10" />
                 </div>
 
-                <div className="flex items-start ml-2">
-                  <span className="text-7xl font-normal leading-none tracking-tighter">
-                    {weatherData.current.temperature ?? '–'}
-                  </span>
-                  <span className="text-xl mt-1 text-zinc-500 dark:text-zinc-400 font-light ml-1">°C</span>
-                </div>
-
-                <div className="text-sm text-zinc-600 dark:text-zinc-400 ml-2 flex flex-col justify-center">
-                  <div>Kelembapan: {weatherData.current.humidity ?? '–'}%</div>
-                  <div>Angin: {weatherData.current.windSpeed} km/h (hembusan {weatherData.current.windGust} km/h)</div>
-                  {suitability && (
-                    <span className={`mt-1 inline-flex w-fit items-center gap-1 border rounded-full px-2 py-0.5 text-xs font-medium ${suitability.className}`}>
-                      <Wind className="w-3 h-3" /> {suitability.label}
+                <div>
+                  <div className="flex items-start">
+                    <span className="text-5xl md:text-6xl font-bold leading-none tracking-tighter text-zinc-900 dark:text-white">
+                      {weatherData.current.temperature ?? '–'}
                     </span>
-                  )}
+                    <span className="text-xl mt-0.5 text-zinc-400 font-light ml-0.5">°C</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize">
+                      {isCloudyNow ? '☁️ Berawan' : '☀️ Cerah'}
+                    </span>
+                    <span className="text-zinc-300 dark:text-zinc-600">•</span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 capitalize">
+                      {todayLabel}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-right flex flex-col">
-                <span className="text-2xl font-medium mb-1">Cuaca</span>
-                <span className="text-zinc-500 dark:text-zinc-400 text-lg leading-tight capitalize">{todayLabel}</span>
-                <span className="text-zinc-500 dark:text-zinc-400 text-lg leading-tight">
-                  {isCloudyNow ? 'Berawan' : 'Cerah'}
-                </span>
+              {/* Weather Stats */}
+              <div className="grid grid-cols-3 gap-2 w-full lg:w-auto">
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg px-3 py-2 text-center min-w-[65px]">
+                  <Droplets className="w-3.5 h-3.5 text-blue-400 mx-auto mb-0.5" />
+                  <div className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    {weatherData.current.humidity ?? '–'}%
+                  </div>
+                  <div className="text-[9px] text-zinc-500 dark:text-zinc-400">Kelembapan</div>
+                </div>
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg px-3 py-2 text-center min-w-[65px]">
+                  <Wind className="w-3.5 h-3.5 text-blue-400 mx-auto mb-0.5" />
+                  <div className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    {weatherData.current.windSpeed} km/h
+                  </div>
+                  <div className="text-[9px] text-zinc-500 dark:text-zinc-400">Angin</div>
+                </div>
+                <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg px-3 py-2 text-center min-w-[65px]">
+                  <Compass className="w-3.5 h-3.5 text-blue-400 mx-auto mb-0.5" />
+                  <div className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    {weatherData.current.windDirection}°
+                  </div>
+                  <div className="text-[9px] text-zinc-500 dark:text-zinc-400">Arah</div>
+                </div>
               </div>
             </div>
 
+            {/* Suitability Badge */}
+            {suitability && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className={`inline-flex items-center gap-1.5 border rounded-full px-2.5 py-0.5 text-[10px] font-medium ${suitability.className}`}>
+                  <Wind className="w-3 h-3" /> {suitability.label}
+                </span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  Hembusan {weatherData.current.windGust} km/h
+                </span>
+              </div>
+            )}
+
             {/* Wind Chart Section */}
-            <div className="mt-10">
-              <div className="flex items-center gap-2 text-sm font-medium text-zinc-900 dark:text-white border-b-2 border-blue-500 w-fit pb-2 mb-4">
-                <Wind className="w-4 h-4 text-blue-500" /> Angin per Jam
+            <div className="mt-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1 bg-blue-500/10 rounded-lg">
+                  <Wind className="w-3.5 h-3.5 text-blue-500" />
+                </div>
+                <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">Angin per Jam</h4>
+                <div className="flex-1 h-px bg-gradient-to-r from-zinc-200 dark:from-zinc-700 to-transparent" />
               </div>
 
               {chart && hourlyData.length > 0 ? (
                 <div className="w-full">
-                  <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="w-full h-36" preserveAspectRatio="none">
+                  <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="w-full h-28" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="windFill" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={chartColors.fillFrom} />
@@ -421,67 +495,93 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                       <line key={frac} x1={0} x2={chart.width} y1={chart.height * frac} y2={chart.height * frac} stroke={chartColors.grid} strokeWidth={1} />
                     ))}
                     <path d={chart.areaPath} fill="url(#windFill)" stroke="none" />
-                    <path d={chart.linePath} fill="none" stroke={chartColors.line} strokeWidth={2.5} strokeLinecap="round" />
+                    <path d={chart.linePath} fill="none" stroke={chartColors.line} strokeWidth={2} strokeLinecap="round" />
                     {chart.points.map((p, i) => (
-                      <circle key={i} cx={p.x} cy={p.y} r={i === chart.points.length - 1 ? 4 : 2.5} fill={i === chart.points.length - 1 ? chartColors.now : chartColors.line} />
+                      <circle key={i} cx={p.x} cy={p.y} r={i === chart.points.length - 1 ? 3.5 : 2} fill={i === chart.points.length - 1 ? chartColors.now : chartColors.line} />
                     ))}
                   </svg>
 
-                  <div className="flex justify-between items-end mt-2 pb-2 overflow-x-auto gap-2">
+                  <div className="flex justify-between items-end mt-1.5 pb-1 overflow-x-auto gap-1.5">
                     {chart.markerIdx.map((idx) => {
                       const point = hourlyData[idx];
                       if (!point) return null;
                       const isNow = idx === hourlyData.length - 1;
-                      // Wind direction: 0° = North (up), 90° = East (right), etc.
-                      // ArrowUp points up by default (0°), so we rotate accordingly
                       const windDirection = point.windDirection || 0;
                       
                       return (
-                        <div key={idx} className="flex flex-col items-center gap-1 min-w-[44px]">
-                          <span className={`text-[12px] ${isNow ? 'text-blue-500 dark:text-blue-300 font-semibold' : 'text-zinc-700 dark:text-zinc-200'}`}>
+                        <div key={idx} className="flex flex-col items-center gap-0.5 min-w-[36px]">
+                          <span className={`text-[10px] ${isNow ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-zinc-600 dark:text-zinc-300'}`}>
                             {Math.round(point.windSpeed)} km/h
                           </span>
-                          <ArrowUp 
-                            className={`${isNow ? 'w-5 h-5 text-blue-500 dark:text-blue-300' : 'w-4 h-4 text-zinc-400'}`} 
-                            style={{ 
-                              transform: `rotate(${windDirection}deg)`,
-                              transition: 'transform 0.3s ease'
-                            }} 
-                          />
-                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{point.time}</span>
+                          <div className={`p-0.5 rounded-full ${isNow ? 'bg-blue-500/10' : ''}`}>
+                            <ArrowUp 
+                              className={`${isNow ? 'w-4 h-4 text-blue-500' : 'w-3.5 h-3.5 text-zinc-400'}`} 
+                              style={{ 
+                                transform: `rotate(${windDirection}deg)`,
+                                transition: 'transform 0.3s ease'
+                              }} 
+                            />
+                          </div>
+                          <span className="text-[9px] text-zinc-500 dark:text-zinc-400">{point.time}</span>
                         </div>
                       );
                     })}
                   </div>
                 </div>
               ) : (
-                <div className="text-sm text-zinc-500 py-8 text-center">Belum ada data angin untuk lokasi ini.</div>
+                <div className="text-sm text-zinc-500 py-4 text-center">Belum ada data angin untuk lokasi ini.</div>
               )}
             </div>
 
             {/* Daily Forecast */}
             {weatherData.daily.length > 0 && (
-              <div className="flex justify-between items-center mt-6 pt-2 overflow-x-auto gap-1">
-                {weatherData.daily.map((day, idx) => (
-                  <div key={idx} className={`flex flex-col items-center gap-3 px-3 py-4 rounded-2xl w-16 shrink-0 ${day.isToday ? 'bg-zinc-100 dark:bg-zinc-800' : 'bg-transparent'}`}>
-                    <span className="text-[15px] text-zinc-700 dark:text-zinc-200">{day.day}</span>
-                    <div className="relative w-8 h-8 flex justify-center items-center">
-                      <div className="absolute w-6 h-6 bg-yellow-400 rounded-full blur-[0.5px]" />
-                      {day.cloudy && (
-                        <div className="absolute -bottom-1 -right-1 w-6 h-4 bg-gray-300 dark:bg-gray-600 rounded-full blur-[0.5px] opacity-90 z-10" />
-                      )}
-                    </div>
-                    <div className="text-[13px] text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap mt-1">
-                      <span className="text-zinc-900 dark:text-white mr-1">{day.tempMax}°</span>
-                      {day.tempMin}°
-                    </div>
+              <div className="mt-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1 bg-blue-500/10 rounded-lg">
+                    <Calendar className="w-3.5 h-3.5 text-blue-500" />
                   </div>
-                ))}
+                  <h4 className="text-xs font-semibold text-zinc-900 dark:text-white">Prakiraan 7 Hari</h4>
+                  <div className="flex-1 h-px bg-gradient-to-r from-zinc-200 dark:from-zinc-700 to-transparent" />
+                </div>
+
+                <div className="flex justify-between items-center overflow-x-auto gap-1.5 pb-1.5">
+                  {weatherData.daily.map((day, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`flex flex-col items-center gap-1.5 px-2.5 py-2 rounded-xl min-w-[50px] transition-all duration-200 ${
+                        day.isToday ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                      }`}
+                    >
+                      <span className={`text-xs font-medium ${day.isToday ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                        {day.day}
+                      </span>
+                      <div className="relative w-6 h-6 flex justify-center items-center">
+                        <div className="absolute w-4 h-4 bg-yellow-400 rounded-full blur-[0.5px]" />
+                        {day.cloudy && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-2.5 bg-zinc-300 dark:bg-zinc-600 rounded-full blur-[0.5px] opacity-90 z-10" />
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">
+                        <span className={`${day.isToday ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-900 dark:text-white'} font-semibold mr-0.5`}>
+                          {day.tempMax}°
+                        </span>
+                        {day.tempMin}°
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Updated At */}
+            <div className="mt-4 text-right">
+              <p className="text-[9px] text-zinc-400 dark:text-zinc-500">
+                Terakhir diperbarui: {weatherData.current.updatedAt ? new Date(weatherData.current.updatedAt).toLocaleString('id-ID') : 'Belum diperbarui'}
+              </p>
+            </div>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }

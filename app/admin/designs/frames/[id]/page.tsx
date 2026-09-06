@@ -182,16 +182,13 @@ export default function KiteFrameDetailPage() {
     }
   };
 
-  // app/admin/designs/frames/[id]/page.tsx - Perbaiki handleStatusChange
   const handleStatusChange = async (status: string) => {
     if (!frame) return;
 
     try {
       setIsUpdatingStatus(true);
-
-      // Gunakan PATCH untuk partial update
       const response = await fetch(`/api/admin/frames/${frame.id}`, {
-        method: "PATCH", // Ganti dari PUT ke PATCH
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
@@ -214,7 +211,6 @@ export default function KiteFrameDetailPage() {
       setIsUpdatingStatus(false);
     }
   };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
