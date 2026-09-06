@@ -21,8 +21,8 @@ interface AdBannerProps {
 export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
   const [adSettings, setAdSettings] = useState<AdSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const adsPushed = useRef(false);
-  const insRef = useRef<HTMLModElement>(null); // Referensi ke elemen <ins>
+  const [adLoaded, setAdLoaded] = useState(false);
+  const adContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -44,9 +44,11 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
     fetchAds();
   }, [position]);
 
+  // Load AdSense script once
   useEffect(() => {
-    if (!adSettings?.scriptUrl || !adSettings?.isActive || adsPushed.current) return;
-
+    // Cek apakah script sudah ada
+    if (typeof window === "undefined") return;
+    
     const scriptId = "adsbygoogle-script";
     let script = document.getElementById(scriptId) as HTMLScriptElement | null;
 
@@ -55,48 +57,58 @@ export function AdBanner({ position = "top", className = "" }: AdBannerProps) {
       script.id = scriptId;
       script.async = true;
       script.crossOrigin = "anonymous";
-      script.src = adSettings.scriptUrl;
+      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adSettings?.clientId || "ca-pub-7542754799825568"}`;
       document.head.appendChild(script);
+      console.log("AdSense script injected");
     }
 
-    const pushAd = () => {
-      if (!adsPushed.current && (window as any).adsbygoogle) {
-        try {
-          (window as any).adsbygoogle = (window as any).adsbygoogle || [];
+    // Initialize adsbygoogle
+    if (!(window as any).adsbygoogle) {
+      (window as any).adsbygoogle = [];
+    }
+
+    // Push ad after a short delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      try {
+        if (adSettings?.isActive && adSettings?.clientId) {
           (window as any).adsbygoogle.push({});
-          adsPushed.current = true;
-        } catch (e) {
-          console.error("AdSense error:", e);
+          setAdLoaded(true);
+          console.log("Ad pushed for position:", position);
         }
+      } catch (e) {
+        console.error("AdSense error:", e);
       }
-    };
-
-    const currentScript = script;
-    currentScript.onload = pushAd;
-
-    // Fallback: jika script sudah ada dan sudah dimuat, langsung push
-    if (script && (script as any).readyState === "complete") {
-      pushAd();
-    }
+    }, 500);
 
     return () => {
-      currentScript.onload = null;
+      clearTimeout(timer);
     };
-  }, [adSettings]);
+  }, [adSettings, position]);
 
-  if (!adSettings || isLoading) {
+  // Loading state
+  if (isLoading) {
     return (
       <div className={`flex items-center justify-center border border-dashed border-zinc-700 bg-zinc-950 text-zinc-500 ${className}`}>
-        <span className="text-sm">Ad Placeholder ({position})</span>
+        <span className="text-sm">Loading ad...</span>
+      </div>
+    );
+  }
+
+  // No active ad
+  if (!adSettings || !adSettings.isActive) {
+    return (
+      <div className={`flex items-center justify-center border border-dashed border-zinc-700 bg-zinc-950 text-zinc-500 ${className}`}>
+        <span className="text-sm">No active ad ({position})</span>
       </div>
     );
   }
 
   return (
-    // Tambahkan min-h-[100px] dan w-full agar iklan punya ruang
-    <div className={`flex flex-col items-center justify-center w-full bg-black min-h-[100px] overflow-hidden ${className}`}>
+    <div 
+      ref={adContainerRef}
+      className={`flex flex-col items-center justify-center w-full bg-black min-h-[100px] overflow-hidden ${className}`}
+    >
       <ins
-        ref={insRef}
         className="adsbygoogle"
         style={{ display: "block", width: "100%", minHeight: "100px", height: "100%" }}
         data-ad-client={adSettings.clientId!}
