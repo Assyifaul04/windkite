@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const locationId = searchParams.get('locationId');
+    const includeForecast = searchParams.get('includeForecast') === 'true';
 
     let location = null;
 
@@ -26,17 +27,39 @@ export async function GET(req: NextRequest) {
 
     if (!location) {
       return NextResponse.json(
-        { error: 'Belum ada lokasi publik di database. Tambahkan SavedLocation dengan isPublic: true.' },
+        { error: 'Belum ada lokasi publik di database.' },
         { status: 404 }
       );
     }
 
+    // === AMBIL DATA CURRENT ===
     const logs = await prisma.weatherLog.findMany({
       where: { locationId: location.id },
       orderBy: { timestamp: 'desc' },
       take: 24,
     });
 
+    // === AMBIL DATA FORECAST (jika diminta) ===
+    let forecastData = null;
+    if (includeForecast) {
+      const now = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 3); // 3 hari kedepan
+      
+      forecastData = await prisma.weatherForecast.findMany({
+        where: {
+          locationId: location.id,
+          timestamp: {
+            gte: now,
+            lte: endDate,
+          },
+        },
+        orderBy: { timestamp: 'asc' },
+        take: 40, // Max 40 data (5 hari x 8 data)
+      });
+    }
+
+    // === PROSES DAILY LOGS ===
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     sevenDaysAgo.setHours(0, 0, 0, 0);
@@ -51,16 +74,7 @@ export async function GET(req: NextRequest) {
 
     const todayKey = new Date().toDateString();
 
-    type DailyBucket = {
-      dateKey: string;
-      label: string;
-      max: number;
-      min: number;
-      humiditySum: number;
-      count: number;
-    };
-    const dailyMap = new Map<string, DailyBucket>();
-
+    const dailyMap = new Map();
     dailyLogs.forEach((log) => {
       const date = new Date(log.timestamp);
       const dateKey = date.toDateString();
@@ -125,6 +139,27 @@ export async function GET(req: NextRequest) {
         }))
         .reverse(),
       daily,
+      // === DATA FORECAST ===
+      forecast: forecastData?.map((f) => ({
+        timestamp: f.timestamp,
+        time: new Date(f.timestamp).toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        date: new Date(f.timestamp).toLocaleDateString('id-ID', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+        }),
+        temperature: f.temperature,
+        humidity: f.humidity,
+        windSpeed: f.windSpeed,
+        windGust: f.windGust,
+        windDirection: f.windDirection,
+        kiteSuitability: f.kiteSuitability,
+        weatherDesc: f.weatherDesc,
+        isDaytime: f.isDaytime,
+      })),
     });
   } catch (error) {
     console.error('Error fetching weather:', error);

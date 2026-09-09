@@ -115,6 +115,7 @@ model SavedLocation {
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   weatherLogs WeatherLog[]
+  weatherForecasts WeatherForecast[]
 
   @@map("saved_locations")
 }
@@ -273,6 +274,32 @@ model CronJob {
   updatedAt      DateTime @updatedAt
 
   @@map("cron_jobs")
+}
+
+model WeatherForecast {
+  id           String   @id @default(cuid())
+  locationId   String   @map("location_id")
+  timestamp    DateTime // Waktu prediksi
+  createdAt    DateTime @default(now()) @map("created_at")
+  
+  temperature  Float?
+  humidity     Float?
+  windSpeed    Float    @map("wind_speed")
+  windGust     Float    @map("wind_gust")
+  windDirection Float   @map("wind_direction")
+  kiteSuitability KiteSuitability @default(TIDAK_LAYAK) @map("kite_suitability")
+  
+  // Metadata
+  forecastHour Int      @map("forecast_hour") // 0-47 (48 jam kedepan)
+  isDaytime    Boolean? @default(true) @map("is_daytime")
+  weatherCode  Int?     @map("weather_code")
+  weatherDesc  String?  @map("weather_desc")
+  
+  location SavedLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  
+  @@unique([locationId, timestamp])
+  @@index([locationId, timestamp])
+  @@map("weather_forecasts")
 }
 
 model WeatherSettings {

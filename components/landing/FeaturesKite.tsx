@@ -145,11 +145,10 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 text-sm font-medium mb-3">
-              <Sparkles className="w-4 h-4" />
               Pilihan Kerangka
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white">
-              Kerangka <span className="text-blue-500">Layangan</span>
+              Kerangka <span className="text-blue-600 dark:text-blue-400">Layangan</span>
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-sm max-w-2xl mx-auto">
               Pilih kerangka yang tersedia, lalu desain dengan gambar favoritmu.
@@ -177,16 +176,16 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
               Pilih kerangka dan mulai desain layanganmu
             </p>
           </div>
-          <div className="max-w-md mx-auto p-6 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-200 dark:border-red-800 text-center">
-            <AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-red-800 dark:text-red-200">
+          <div className="max-w-md mx-auto p-6 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 text-center">
+            <AlertCircle className="w-10 h-10 text-blue-600 dark:text-blue-400 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-zinc-900 dark:text-white">
               Gagal Memuat Data
             </h3>
-            <p className="text-sm text-red-600 dark:text-red-300 mt-1">{error}</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{error}</p>
             <Button 
               variant="outline" 
               size="sm"
-              className="mt-3"
+              className="mt-3 border-zinc-300 dark:border-zinc-700"
               onClick={() => window.location.reload()}
             >
               Coba Lagi
@@ -207,15 +206,15 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
               Pilihan Kerangka
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white">
-              Kerangka <span className="text-blue-500">Layangan</span>
+              Kerangka <span className="text-blue-600 dark:text-blue-400">Layangan</span>
             </h2>
             <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-sm max-w-2xl mx-auto">
               Pilih kerangka yang tersedia, lalu desain dengan gambar favoritmu.
             </p>
           </div>
           <div className="max-w-md mx-auto p-8 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shapes className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-950/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shapes className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
               Belum Ada Kerangka
@@ -234,16 +233,16 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
       <div className="container mx-auto px-4">
         {/* Header - Judul tetap besar */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 text-blue-600 dark:text-blue-400 text-sm font-medium mb-3 border border-blue-100 dark:border-blue-800/30">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 text-sm font-medium mb-3 border border-blue-100 dark:border-blue-900">
             <Sparkles className="w-4 h-4" />
             <span>Pilihan Kerangka</span>
-            <Badge variant="secondary" className="ml-1 text-xs bg-white/50 dark:bg-black/50">
+            <Badge variant="secondary" className="ml-1 text-xs bg-white/60 dark:bg-black/60 text-zinc-700 dark:text-zinc-200">
               {total}
             </Badge>
           </div>
           
           <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white">
-            Kerangka <span className="text-blue-500">Layangan</span>
+            Kerangka <span className="text-blue-600 dark:text-blue-400">Layangan</span>
           </h2>
           <p className="text-zinc-600 dark:text-zinc-400 mt-2 text-sm max-w-2xl mx-auto">
             Pilih kerangka yang tersedia, lalu desain dengan gambar favoritmu. 
@@ -266,8 +265,8 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
               className="group relative"
             >
               <div className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 hover:border-blue-500 dark:hover:border-blue-500 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-0.5 h-full flex flex-col">
-                {/* Image Container - Lebih kecil */}
-                <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-800 dark:to-zinc-900">
+                {/* Image Container */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                   <Image
                     src={kite.imageUrl}
                     alt={kite.name}
@@ -280,9 +279,9 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                   />
                   
                   {/* Overlay Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   
-                  {/* Stats Badges - Lebih kecil */}
+                  {/* Stats Badges */}
                   <div className="absolute top-2 right-2 flex flex-col gap-1.5">
                     {kite.viewCount > 0 && (
                       <Badge className="bg-black/60 backdrop-blur-sm hover:bg-black/70 text-white border-0 shadow-lg text-[10px] px-2 py-0.5">
@@ -291,17 +290,17 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                       </Badge>
                     )}
                     {kite.useCount > 0 && (
-                      <Badge className="bg-blue-500/80 backdrop-blur-sm hover:bg-blue-500/90 text-white border-0 shadow-lg text-[10px] px-2 py-0.5">
+                      <Badge className="bg-blue-600/85 backdrop-blur-sm hover:bg-blue-600/95 text-white border-0 shadow-lg text-[10px] px-2 py-0.5">
                         <Users className="w-2.5 h-2.5 mr-1" />
                         {kite.useCount}x
                       </Badge>
                     )}
                   </div>
 
-                  {/* Popular Badge - Lebih kecil */}
+                  {/* Popular Badge */}
                   {(kite.useCount > 5 || kite.viewCount > 50) && (
                     <div className="absolute top-2 left-2">
-                      <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-lg text-[10px] px-2 py-0.5">
+                      <Badge className="bg-zinc-900/85 dark:bg-white/90 text-white dark:text-zinc-900 border-0 shadow-lg text-[10px] px-2 py-0.5">
                         <TrendingUp className="w-2.5 h-2.5 mr-1" />
                         Populer
                       </Badge>
@@ -309,7 +308,7 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                   )}
                 </div>
 
-                {/* Content - Lebih compact */}
+                {/* Content */}
                 <div className="p-3.5 space-y-2 flex-1 flex flex-col">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -317,7 +316,7 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                         {kite.name}
                       </h3>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-[7px] font-bold">
+                        <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center text-white text-[7px] font-bold">
                           {kite.user?.name?.charAt(0).toUpperCase() || 'A'}
                         </div>
                         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
@@ -326,7 +325,7 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                       </div>
                     </div>
                     {kite.canvasWidth && kite.canvasHeight && (
-                      <Badge variant="outline" className="text-[9px] shrink-0 border-zinc-300 dark:border-zinc-600 px-1.5 py-0">
+                      <Badge variant="outline" className="text-[9px] shrink-0 border-zinc-300 dark:border-zinc-600 text-zinc-600 dark:text-zinc-300 px-1.5 py-0">
                         {kite.canvasWidth}×{kite.canvasHeight}
                       </Badge>
                     )}
@@ -338,7 +337,7 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                     </p>
                   )}
 
-                  {/* Footer - Lebih compact */}
+                  {/* Footer */}
                   <div className="flex items-center justify-between pt-1.5 border-t border-zinc-100 dark:border-zinc-800">
                     <span className="flex items-center gap-1 text-[9px] text-zinc-500 dark:text-zinc-400">
                       <Clock className="w-2.5 h-2.5" />
@@ -352,14 +351,14 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                     )}
                   </div>
 
-                  {/* Action Button - Lebih kecil */}
+                  {/* Action Button */}
                   <Button
                     onClick={() => handleEditClick(kite.id)}
                     size="sm"
                     className={cn(
                       "w-full gap-1.5 text-xs h-8 transition-all duration-300",
                       !session 
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40"
                         : "bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white"
                     )}
                   >
@@ -381,13 +380,13 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
           ))}
         </div>
 
-        {/* Footer Action - Lebih compact */}
+        {/* Footer Action */}
         <div className="text-center mt-8">
-          <div className="inline-flex flex-col items-center gap-3 p-5 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-2xl border border-blue-100 dark:border-blue-800/30 max-w-2xl mx-auto">
+          <div className="inline-flex flex-col items-center gap-3 p-5 bg-blue-50/60 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900 max-w-2xl mx-auto">
             <div className="flex items-center gap-2">
               {session ? (
                 <>
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center">
                     <Crown className="w-3.5 h-3.5 text-white" />
                   </div>
                   <p className="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
@@ -408,8 +407,9 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                 <Button
                   onClick={() => signIn('google', { callbackUrl: '/user/designs' })}
                   size="sm"
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 gap-1.5 px-4 text-xs h-8"
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 gap-1.5 px-4 text-xs h-8"
                 >
+                  {/* Logo Google resmi dipertahankan multi-warna sesuai brand guideline */}
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -421,7 +421,7 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
               )}
               {session && total > limit && (
                 <Link href="/user/designs">
-                  <Button variant="outline" size="sm" className="gap-1.5 px-4 text-xs h-8 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30">
+                  <Button variant="outline" size="sm" className="gap-1.5 px-4 text-xs h-8 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30">
                     Lihat Semua
                     <ChevronRight className="w-3 h-3" />
                   </Button>
@@ -432,7 +432,7 @@ export default function FeaturesKite({ className = '', limit = 6 }: FeaturesKite
                   onClick={() => signIn('google', { callbackUrl: '/user/designs' })}
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 px-4 text-xs h-8 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                  className="gap-1.5 px-4 text-xs h-8 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30"
                 >
                   Lihat Semua
                   <ChevronRight className="w-3 h-3" />
