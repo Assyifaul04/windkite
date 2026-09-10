@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { addHours, setMinutes, setSeconds } from 'date-fns';
+import { calculateNextRun } from '@/lib/cron-utils';
 
 export async function PATCH(
   req: NextRequest,
@@ -17,33 +17,31 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await req.json();
-    
-    // Cek apakah job ada
-    const existingJob = await prisma.cronJob.findUnique({
-      where: { id },
-    });
 
+    const existingJob = await prisma.cronJob.findUnique({ where: { id } });
     if (!existingJob) {
-      return NextResponse.json(
-        { error: 'Cron job not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Cron job not found' }, { status: 404 });
     }
-    
-    // Update data
-    const updateData: any = {
-      updatedAt: new Date(),
-    };
-    
+
+    const updateData: any = { updatedAt: new Date() };
+
     if (body.name !== undefined) updateData.name = body.name;
     if (body.description !== undefined) updateData.description = body.description;
+
     if (body.schedule !== undefined) {
+      if (body.schedule.trim().split(/\s+/).length !== 5) {
+        return NextResponse.json(
+          { error: 'Schedule must be in cron format (5 fields)' },
+          { status: 400 }
+        );
+      }
       updateData.schedule = body.schedule;
       updateData.nextRun = calculateNextRun(body.schedule);
     }
+
     if (body.command !== undefined) updateData.command = body.command;
     if (body.status !== undefined) updateData.status = body.status;
-    
+
     const job = await prisma.cronJob.update({
       where: { id },
       data: updateData,
@@ -71,20 +69,12 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existingJob = await prisma.cronJob.findUnique({
-      where: { id },
-    });
-
+    const existingJob = await prisma.cronJob.findUnique({ where: { id } });
     if (!existingJob) {
-      return NextResponse.json(
-        { error: 'Cron job not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Cron job not found' }, { status: 404 });
     }
 
-    await prisma.cronJob.delete({
-      where: { id },
-    });
+    await prisma.cronJob.delete({ where: { id } });
 
     return NextResponse.json({ message: 'Cron job deleted successfully' });
   } catch (error) {
@@ -94,37 +84,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
-
-function calculateNextRun(schedule: string): Date {
-  const now = new Date();
-  const parts = schedule.trim().split(' ');
-  
-  if (parts.length !== 5) {
-    return addHours(now, 6);
-  }
-
-  const [minute, hour, day, month, dayOfWeek] = parts;
-  let nextRun = new Date(now);
-  nextRun = setSeconds(nextRun, 0);
-  nextRun = setMinutes(nextRun, 0);
-  
-  if (minute === '0' && hour === '*/6' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = addHours(now, 6);
-    nextRun = setMinutes(nextRun, 0);
-    nextRun = setSeconds(nextRun, 0);
-    return nextRun;
-  }
-  
-  if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = new Date(now);
-    nextRun.setDate(now.getDate() + 1);
-    nextRun.setHours(0, 0, 0, 0);
-    return nextRun;
-  }
-  
-  nextRun = addHours(now, 6);
-  nextRun = setMinutes(nextRun, 0);
-  nextRun = setSeconds(nextRun, 0);
-  return nextRun;
 }

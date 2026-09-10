@@ -32,34 +32,36 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // === AMBIL DATA CURRENT ===
+    // === AMBIL DATA CURRENT (24 jam terakhir) ===
     const logs = await prisma.weatherLog.findMany({
       where: { locationId: location.id },
       orderBy: { timestamp: 'desc' },
       take: 24,
     });
 
-    // === AMBIL DATA FORECAST (jika diminta) ===
+    // === AMBIL DATA FORECAST: 2 HARI (hari ini + besok) ===
     let forecastData = null;
     if (includeForecast) {
-      const now = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 3); // 3 hari kedepan
-      
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const endDate = new Date(startOfToday);
+      endDate.setDate(endDate.getDate() + 1); // besok
+      endDate.setHours(23, 59, 59, 999);
+
       forecastData = await prisma.weatherForecast.findMany({
         where: {
           locationId: location.id,
           timestamp: {
-            gte: now,
+            gte: startOfToday,
             lte: endDate,
           },
         },
         orderBy: { timestamp: 'asc' },
-        take: 40, // Max 40 data (5 hari x 8 data)
+        take: 24, // 2 hari x 12 data (interval 2 jam) — sesuaikan dengan interval Anda
       });
     }
 
-    // === PROSES DAILY LOGS ===
+    // === PROSES DAILY LOGS (7 hari terakhir untuk prakiraan harian) ===
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     sevenDaysAgo.setHours(0, 0, 0, 0);
@@ -139,7 +141,6 @@ export async function GET(req: NextRequest) {
         }))
         .reverse(),
       daily,
-      // === DATA FORECAST ===
       forecast: forecastData?.map((f) => ({
         timestamp: f.timestamp,
         time: new Date(f.timestamp).toLocaleTimeString('id-ID', {

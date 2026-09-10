@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { addHours, setMinutes, setSeconds } from 'date-fns';
+import { calculateNextRun } from '@/lib/cron-utils';
 
 export async function POST(
   req: NextRequest,
@@ -17,10 +17,7 @@ export async function POST(
 
     const { id } = await params;
 
-    const job = await prisma.cronJob.findUnique({
-      where: { id },
-    });
-
+    const job = await prisma.cronJob.findUnique({ where: { id } });
     if (!job) {
       return NextResponse.json({ error: 'Cron job not found' }, { status: 404 });
     }
@@ -33,29 +30,23 @@ export async function POST(
 
     try {
       const command = job.command.toLowerCase();
-      
-      // Weather update
+
       if (command === 'update-weather' || command.includes('weather')) {
         const weatherResult = await executeWeatherUpdate();
         success = weatherResult.success;
         result = weatherResult.message;
         details = weatherResult.details || '';
-      } 
-      // Session cleanup
-      else if (command === 'clean-sessions' || command.includes('clean')) {
+      } else if (command === 'clean-sessions' || command.includes('clean')) {
         const sessionResult = await executeSessionCleanup();
         success = sessionResult.success;
         result = sessionResult.message;
         details = sessionResult.details || '';
-      } 
-      // Report generation
-      else if (command === 'generate-reports' || command.includes('report')) {
+      } else if (command === 'generate-reports' || command.includes('report')) {
         const reportResult = await executeReportGeneration();
         success = reportResult.success;
         result = reportResult.message;
         details = reportResult.details || '';
-      } 
-      else {
+      } else {
         result = `Unknown command: ${job.command}`;
         success = false;
       }
@@ -65,7 +56,6 @@ export async function POST(
       success = false;
     }
 
-    // Update job statistics
     const updateData: any = {
       lastRun: new Date(),
       runs: { increment: 1 },
@@ -78,6 +68,7 @@ export async function POST(
       updateData.failedRuns = { increment: 1 };
     }
 
+    // PENTING: hitung nextRun dari schedule job, bukan hardcoded
     updateData.nextRun = calculateNextRun(job.schedule);
 
     const updatedJob = await prisma.cronJob.update({
@@ -102,26 +93,34 @@ export async function POST(
   }
 }
 
-// Weather update execution - FIXED baseUrl
+// ==========================================
+// Helper: resolve base URL
+// ==========================================
+function resolveBaseUrl(): string {
+  let baseUrl =
+    process.env.NEXTAUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+
+  if (!baseUrl) {
+    baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://your-domain.com'
+      : 'http://localhost:3000';
+  }
+
+  return baseUrl.replace(/\/$/, '');
+}
+
+// ==========================================
+// Execute Weather Update
+// ==========================================
 async function executeWeatherUpdate(): Promise<{ success: boolean; message: string; details?: string }> {
   try {
-    // FIX: Use proper base URL
-    let baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL;
-    
-    // If still undefined, use localhost for development
-    if (!baseUrl) {
-      baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://your-domain.com' // Ganti dengan domain produksi Anda
-        : 'http://localhost:3000';
-    }
-    
-    // Remove trailing slash if exists
-    baseUrl = baseUrl.replace(/\/$/, '');
-    
+    const baseUrl = resolveBaseUrl();
     const cronSecret = process.env.CRON_SECRET || 'your-secret-key';
-    
+
     console.log(`🌐 Calling weather update API at: ${baseUrl}/api/cron/update-weather`);
-    
+
     const response = await fetch(`${baseUrl}/api/cron/update-weather`, {
       headers: {
         'Authorization': `Bearer ${cronSecret}`,
@@ -135,11 +134,11 @@ async function executeWeatherUpdate(): Promise<{ success: boolean; message: stri
     }
 
     const data = await response.json();
-    
+
     return {
       success: true,
       message: data.message || 'Weather update completed successfully',
-      details: `Updated ${data.updatedCount || 0} locations, ${data.errorCount || 0} errors`,
+      details: `Updated ${data.updatedCount || 0} locations, ${data.errorCount || 0} errors, ${data.forecastCount || 0} forecast entries`,
     };
   } catch (error) {
     console.error('Weather update error:', error);
@@ -151,23 +150,16 @@ async function executeWeatherUpdate(): Promise<{ success: boolean; message: stri
   }
 }
 
-// Session cleanup execution - FIXED baseUrl
+// ==========================================
+// Execute Session Cleanup
+// ==========================================
 async function executeSessionCleanup(): Promise<{ success: boolean; message: string; details?: string }> {
   try {
-    let baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL;
-    
-    if (!baseUrl) {
-      baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://your-domain.com'
-        : 'http://localhost:3000';
-    }
-    
-    baseUrl = baseUrl.replace(/\/$/, '');
-    
+    const baseUrl = resolveBaseUrl();
     const cronSecret = process.env.CRON_SECRET || 'your-secret-key';
-    
+
     console.log(`🌐 Calling clean sessions API at: ${baseUrl}/api/cron/clean-sessions`);
-    
+
     const response = await fetch(`${baseUrl}/api/cron/clean-sessions`, {
       headers: {
         'Authorization': `Bearer ${cronSecret}`,
@@ -179,7 +171,7 @@ async function executeSessionCleanup(): Promise<{ success: boolean; message: str
       const errorText = await response.text();
       throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
-    
+
     const data = await response.json();
     return {
       success: true,
@@ -196,23 +188,16 @@ async function executeSessionCleanup(): Promise<{ success: boolean; message: str
   }
 }
 
-// Report generation execution - FIXED baseUrl
+// ==========================================
+// Execute Report Generation
+// ==========================================
 async function executeReportGeneration(): Promise<{ success: boolean; message: string; details?: string }> {
   try {
-    let baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL;
-    
-    if (!baseUrl) {
-      baseUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://your-domain.com'
-        : 'http://localhost:3000';
-    }
-    
-    baseUrl = baseUrl.replace(/\/$/, '');
-    
+    const baseUrl = resolveBaseUrl();
     const cronSecret = process.env.CRON_SECRET || 'your-secret-key';
-    
+
     console.log(`🌐 Calling generate reports API at: ${baseUrl}/api/cron/generate-reports`);
-    
+
     const response = await fetch(`${baseUrl}/api/cron/generate-reports`, {
       headers: {
         'Authorization': `Bearer ${cronSecret}`,
@@ -224,7 +209,7 @@ async function executeReportGeneration(): Promise<{ success: boolean; message: s
       const errorText = await response.text();
       throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
-    
+
     const data = await response.json();
     return {
       success: true,
@@ -239,50 +224,4 @@ async function executeReportGeneration(): Promise<{ success: boolean; message: s
       details: error instanceof Error ? error.stack : undefined,
     };
   }
-}
-
-function calculateNextRun(schedule: string): Date {
-  const now = new Date();
-  const parts = schedule.trim().split(' ');
-  
-  if (parts.length !== 5) {
-    return addHours(now, 6);
-  }
-
-  const [minute, hour, day, month, dayOfWeek] = parts;
-  let nextRun = new Date(now);
-  nextRun = setSeconds(nextRun, 0);
-  
-  // Daily at midnight: "0 0 * * *"
-  if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = new Date(now);
-    if (now.getHours() >= 0 && now.getMinutes() > 0) {
-      nextRun.setDate(now.getDate() + 1);
-    }
-    nextRun.setHours(0, 0, 0, 0);
-    return nextRun;
-  }
-  
-  // Every 6 hours: "0 */6 * * *"
-  if (minute === '0' && hour === '*/6' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = addHours(now, 6);
-    nextRun = setMinutes(nextRun, 0);
-    nextRun = setSeconds(nextRun, 0);
-    return nextRun;
-  }
-  
-  // Every hour: "0 * * * *"
-  if (minute === '0' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = addHours(now, 1);
-    nextRun = setMinutes(nextRun, 0);
-    nextRun = setSeconds(nextRun, 0);
-    return nextRun;
-  }
-  
-  // Default: 6 hours from now
-  nextRun = addHours(now, 6);
-  nextRun = setMinutes(nextRun, 0);
-  nextRun = setSeconds(nextRun, 0);
-  
-  return nextRun;
 }

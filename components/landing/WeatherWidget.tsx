@@ -1,12 +1,11 @@
 // components/landing/WeatherWidget.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
-import { 
-  MapPin, Search, ArrowUp, Sun, Cloud, Wind, Loader2, AlertCircle, 
-  X, Droplets, Thermometer, Compass, Calendar, CloudRain, 
-  Moon, CloudSun, Sunrise, Sunset, Gauge 
+import {
+  MapPin, Search, Sun, Cloud, Wind, Loader2, AlertCircle,
+  X, Droplets, Compass, Calendar, Gauge, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -97,7 +96,17 @@ const roundNumber = (num: number, decimals: number = 1): number => {
   return Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
 };
 
-// Palet dibatasi: hitam, putih, biru (zinc dipakai sebagai abu netral di antara hitam & putih)
+// Apakah suitability ini "layak terbang"?
+const isFlyable = (s: KiteSuitability): boolean => s === 'RINGAN' || s === 'BERAT' || s === 'SEMUA';
+
+// Label singkat untuk suitability
+const suitabilityShortLabel: Record<KiteSuitability, string> = {
+  TIDAK_LAYAK: 'Tidak layak',
+  RINGAN: 'Ringan',
+  BERAT: 'Berat',
+  SEMUA: 'Semua',
+};
+
 const suitabilityMeta: Record<KiteSuitability, { label: string; className: string; icon: string }> = {
   TIDAK_LAYAK: { label: 'Tidak layak terbang', className: 'bg-zinc-900/5 text-zinc-700 dark:text-zinc-300 dark:bg-white/5 border-zinc-400/30', icon: '❌' },
   RINGAN: { label: 'Layangan ringan', className: 'bg-blue-400/10 text-blue-500 dark:text-blue-300 border-blue-400/30', icon: '🪁' },
@@ -178,10 +187,86 @@ function buildSmoothPath(points: { x: number; y: number }[]) {
   return d;
 }
 
-function evenlySpacedIndices(length: number, count: number) {
-  if (length <= count) return Array.from({ length }, (_, i) => i);
-  const step = (length - 1) / (count - 1);
-  return Array.from({ length: count }, (_, i) => Math.round(i * step));
+// Label hari dinamis: Hari ini, Besok
+function getDayLabel(date: Date, today: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const t = new Date(today);
+  t.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((d.getTime() - t.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Hari ini';
+  if (diffDays === 1) return 'Besok';
+  if (diffDays === 2) return 'Lusa';
+  return d.toLocaleDateString('id-ID', { weekday: 'long' });
+}
+
+// Format tanggal singkat (mis. "10 Sep")
+function formatShortDate(date: Date): string {
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+
+// Format jam dari Date -> "HH.MM"
+function formatHour(date: Date): string {
+  return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+}
+
+// ==========================================
+// Analisis rentang jam layak terbang
+// ==========================================
+interface FlyableRange {
+  start: Date;
+  end: Date;
+  durationHours: number;
+  startLabel: string;
+  endLabel: string;
+  suits: KiteSuitability[];
+}
+
+function analyzeFlyableRanges(
+  data: { timestamp: string; kiteSuitability: KiteSuitability; isForecast: boolean; time: string }[]
+): { ranges: FlyableRange[]; bestRange: FlyableRange | null } {
+  const ranges: FlyableRange[] = [];
+  let currentStart: number | null = null;
+
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    const flyable = isFlyable(item.kiteSuitability) && item.timestamp;
+    if (flyable && currentStart === null) {
+      currentStart = i;
+    }
+    if ((!flyable || i === data.length - 1) && currentStart !== null) {
+      // range berakhir di i-1 (atau i jika item terakhir flyable)
+      const endIdx = flyable && i === data.length - 1 ? i : i - 1;
+      if (endIdx >= currentStart) {
+        const startItem = data[currentStart];
+        const endItem = data[endIdx];
+        const startDate = new Date(startItem.timestamp);
+        const endDate = new Date(endItem.timestamp);
+        // Durasi: dari jam mulai sampai jam akhir + 1 jam (interval data)
+        const durationHours = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)) + 1);
+        const suits = data.slice(currentStart, endIdx + 1).map(d => d.kiteSuitability);
+        ranges.push({
+          start: startDate,
+          end: endDate,
+          durationHours,
+          startLabel: formatHour(startDate),
+          endLabel: formatHour(endDate),
+          suits,
+        });
+      }
+      currentStart = null;
+    }
+  }
+
+  // Cari range terpanjang
+  let bestRange: FlyableRange | null = null;
+  for (const r of ranges) {
+    if (!bestRange || r.durationHours > bestRange.durationHours) {
+      bestRange = r;
+    }
+  }
+
+  return { ranges, bestRange };
 }
 
 export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
@@ -189,6 +274,14 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const isDark = !mounted || resolvedTheme !== 'light';
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkSize = () => setIsMobile(window.innerWidth < 640);
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => window.removeEventListener('resize', checkSize);
+  }, []);
 
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -198,6 +291,8 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [loadingWeather, setLoadingWeather] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const chartScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,7 +325,7 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
       try {
         setLoadingWeather(true);
         setError(null);
-        
+
         if (selectedId === 'jember-default') {
           setData(fallbackData);
           setLoadingWeather(false);
@@ -251,17 +346,16 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
   }, [selectedId]);
 
   const filteredLocations = useMemo(() => {
-    return locations.filter(loc => 
+    return locations.filter(loc =>
       loc.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [locations, searchQuery]);
 
   const weatherData = data || fallbackData;
-  
-  // Palet grafik dibatasi ke biru (aktual & prediksi) + abu netral untuk garis bantu
+
   const chartColors = {
-    line: '#2563eb',           // biru - data aktual
-    lineForecast: '#93c5fd',   // biru muda - prediksi
+    line: '#2563eb',
+    lineForecast: '#93c5fd',
     fill: 'rgba(37,99,235,0.15)',
     fillForecast: 'rgba(147,197,253,0.15)',
     grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
@@ -269,54 +363,103 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
     dotForecast: '#93c5fd',
     dotNow: '#1e3a8a',
     text: isDark ? '#9ca3af' : '#71717a',
-    separator: isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)',
+    separator: 'rgba(37,99,235,0.55)',
+    nightBg: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+    flyableBg: isDark ? 'rgba(37,99,235,0.10)' : 'rgba(37,99,235,0.08)',
   };
 
-  const hourlyData = useMemo(() => {
-    if (!weatherData?.hourly) return [];
-    return [...weatherData.hourly].sort((a, b) => {
+  // =====================================================================
+  // FILTER DATA: HANYA 2 HARI (hari ini + besok).
+  // Saat berganti hari, otomatis data bergeser: kemarin hilang,
+  // besok menjadi hari ini. Selalu 2 hari.
+  // =====================================================================
+  const allHourlyData = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endDate = new Date(startOfToday);
+    endDate.setDate(endDate.getDate() + 1); // besok
+    endDate.setHours(23, 59, 59, 999);
+
+    const hourly = (weatherData?.hourly || [])
+      .filter(h => {
+        if (!h.timestamp) return true;
+        const t = new Date(h.timestamp);
+        return t >= startOfToday && t <= endDate;
+      })
+      .map(h => ({
+        time: h.time,
+        timestamp: h.timestamp,
+        temp: h.temp,
+        humidity: h.humidity,
+        windSpeed: h.windSpeed,
+        windGust: h.windGust,
+        windDirection: h.windDirection,
+        kiteSuitability: h.kiteSuitability,
+        isForecast: false,
+        isDaytime: (() => {
+          if (!h.timestamp) return true;
+          const hour = new Date(h.timestamp).getHours();
+          return hour >= 5 && hour < 18;
+        })(),
+      }));
+
+    const forecast = (weatherData?.forecast || [])
+      .filter(f => {
+        const t = new Date(f.timestamp);
+        return t >= startOfToday && t <= endDate;
+      })
+      .map(f => ({
+        time: f.time,
+        timestamp: f.timestamp.toString(),
+        temp: f.temperature ?? 0,
+        humidity: f.humidity ?? 0,
+        windSpeed: f.windSpeed,
+        windGust: f.windGust,
+        windDirection: f.windDirection,
+        kiteSuitability: f.kiteSuitability,
+        isForecast: true,
+        isDaytime: f.isDaytime ?? true,
+      }));
+
+    const combined = [...hourly, ...forecast];
+    combined.sort((a, b) => {
       if (a.timestamp && b.timestamp) {
         return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
       }
       return 0;
     });
+
+    // Hilangkan duplikat timestamp
+    const seen = new Set<string>();
+    return combined.filter(item => {
+      const key = item.timestamp ? new Date(item.timestamp).toISOString().slice(0, 13) : item.time;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }, [weatherData]);
 
-  // Gabungkan hourly dan forecast untuk grafik
-  const allHourlyData = useMemo(() => {
-    const hourly = hourlyData.map(h => ({
-      ...h,
-      isForecast: false,
-    }));
-    
-    const forecast = (weatherData?.forecast || []).map(f => ({
-      time: f.time,
-      timestamp: f.timestamp.toString(),
-      temp: f.temperature ?? 0,
-      humidity: f.humidity ?? 0,
-      windSpeed: f.windSpeed,
-      windGust: f.windGust,
-      windDirection: f.windDirection,
-      kiteSuitability: f.kiteSuitability,
-      isForecast: true,
-    }));
-    
-    return [...hourly, ...forecast];
-  }, [hourlyData, weatherData]);
+  // =====================================================================
+  // ANALISIS RENTANG JAM LAYAK TERBANG (untuk deskripsi prediksi)
+  // =====================================================================
+  const flyableAnalysis = useMemo(() => {
+    return analyzeFlyableRanges(allHourlyData);
+  }, [allHourlyData]);
 
-  // Chart - dibuat lebih besar & scrollable secara horizontal
+  // =====================================================================
+  // CHART
+  // =====================================================================
   const chart = useMemo(() => {
     const data = allHourlyData;
     if (data.length === 0) return null;
 
-    // Lebar dasar per titik data agar grafik tetap lega saat data banyak (scrollable)
-    const perPoint = 70;
-    const width = Math.max(900, data.length * perPoint);
-    const height = 320;
-    const padTop = 36;
-    const padBottom = 46;
-    const padLeft = 56;
-    const padRight = 24;
+    const perPoint = isMobile ? 60 : 70;
+    const width = Math.max(isMobile ? 600 : 900, data.length * perPoint);
+    const height = isMobile ? 240 : 320;
+    const padTop = isMobile ? 44 : 52;
+    const padBottom = isMobile ? 38 : 46;
+    const padLeft = isMobile ? 42 : 56;
+    const padRight = isMobile ? 14 : 24;
 
     const speeds = data.map((h) => h.windSpeed);
     const maxSpeed = Math.max(...speeds, 5);
@@ -329,32 +472,72 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
     const points = data.map((h, i) => {
       const x = padLeft + (i / (data.length - 1 || 1)) * chartWidth;
       const y = padTop + chartHeight - ((h.windSpeed - minSpeed) / range) * chartHeight;
-      return { x, y, speed: h.windSpeed, isForecast: h.isForecast };
+      return { x, y, speed: h.windSpeed, isForecast: h.isForecast, isDaytime: h.isDaytime };
     });
 
-    // Cari titik tengah untuk garis pemisah (hari ini vs besok)
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    // ====== KELOMPOKKAN PER HARI ======
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    let separatorIndex = -1;
-    for (let i = 0; i < data.length; i++) {
-      const item = data[i];
-      if (item.timestamp) {
-        const date = new Date(item.timestamp);
-        if (date >= tomorrow) {
-          separatorIndex = i;
-          break;
-        }
+    const dayGroups: { dayKey: string; label: string; sublabel: string; indices: number[]; date: Date }[] = [];
+    data.forEach((item, i) => {
+      if (!item.timestamp) return;
+      const d = new Date(item.timestamp);
+      const dayKey = d.toDateString();
+      const dayStart = new Date(d);
+      dayStart.setHours(0, 0, 0, 0);
+      let group = dayGroups.find(g => g.dayKey === dayKey);
+      if (!group) {
+        group = {
+          dayKey,
+          label: getDayLabel(dayStart, today),
+          sublabel: formatShortDate(dayStart),
+          indices: [],
+          date: dayStart,
+        };
+        dayGroups.push(group);
       }
-    }
-    // Jika tidak ditemukan, gunakan 2/3 dari data
-    if (separatorIndex === -1) {
-      separatorIndex = Math.floor(data.length * 0.6);
-    }
+      group.indices.push(i);
+    });
 
-    // Y-axis labels (5 steps)
+    // ====== SEPARATOR HARI ======
+    // Hari ini: label di kiri atas (tanpa garis).
+    // Besok: garis putus-putus vertikal di tengah + label di atas.
+    const separators: {
+      x: number;
+      label: string;
+      sublabel: string;
+      isFirst: boolean;
+      date: Date;
+    }[] = [];
+
+    dayGroups.forEach((group, gi) => {
+      const firstIdx = group.indices[0];
+      if (gi === 0) {
+        // Hari pertama: label di kiri atas, tidak ada garis vertikal.
+        separators.push({
+          x: points[firstIdx].x,
+          label: group.label,
+          sublabel: group.sublabel,
+          isFirst: true,
+          date: group.date,
+        });
+      } else {
+        // Hari berikutnya: garis di tengah antara titik terakhir hari
+        // sebelumnya dan titik pertama hari ini.
+        const prevLastIdx = dayGroups[gi - 1].indices[dayGroups[gi - 1].indices.length - 1];
+        const x = (points[prevLastIdx].x + points[firstIdx].x) / 2;
+        separators.push({
+          x,
+          label: group.label,
+          sublabel: group.sublabel,
+          isFirst: false,
+          date: group.date,
+        });
+      }
+    });
+
+    // Y-axis labels
     const ySteps = 5;
     const yLabels = [];
     for (let i = 0; i <= ySteps; i++) {
@@ -365,44 +548,77 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
       });
     }
 
-    // X-axis labels: tampilkan setiap titik karena grafik sudah lebar & scrollable
     const labelIndices = Array.from({ length: data.length }, (_, i) => i);
 
-    // Pisahkan data real dan forecast untuk garis
     const realPoints = points.filter((_, i) => !data[i].isForecast);
     const forecastPoints = points.filter((_, i) => data[i].isForecast);
-    
+
     const realPath = buildSmoothPath(realPoints);
     const forecastPath = buildSmoothPath(forecastPoints);
-    
-    // Area path
-    const areaPath = points.length > 0 
-      ? `${buildSmoothPath(points)} L ${points[points.length - 1].x} ${height - padBottom} L ${points[0].x} ${height - padBottom} Z` 
+
+    const areaPath = points.length > 0
+      ? `${buildSmoothPath(points)} L ${points[points.length - 1].x} ${height - padBottom} L ${points[0].x} ${height - padBottom} Z`
       : '';
 
-    return { 
-      width, 
-      height, 
-      padTop, 
-      padBottom, 
-      padLeft, 
-      padRight,
-      points, 
-      realPath,
-      forecastPath,
-      areaPath, 
-      labelIndices,
-      yLabels,
-      data,
-      maxSpeed,
-      minSpeed,
-      chartHeight,
-      chartWidth,
-      separatorIndex,
-      realPoints,
-      forecastPoints,
+    // Shading malam
+    const nightBands: { x1: number; x2: number }[] = [];
+    let bandStart = -1;
+    points.forEach((p, i) => {
+      if (!p.isDaytime) {
+        if (bandStart === -1) bandStart = i;
+      } else {
+        if (bandStart !== -1) {
+          nightBands.push({ x1: points[bandStart].x, x2: points[i - 1].x });
+          bandStart = -1;
+        }
+      }
+    });
+    if (bandStart !== -1) {
+      nightBands.push({ x1: points[bandStart].x, x2: points[points.length - 1].x });
+    }
+
+    // Shading zona layak terbang (biru transparan)
+    const flyableBands: { x1: number; x2: number }[] = [];
+    let flyStart = -1;
+    data.forEach((d, i) => {
+      const fly = isFlyable(d.kiteSuitability);
+      if (fly) {
+        if (flyStart === -1) flyStart = i;
+      } else {
+        if (flyStart !== -1) {
+          flyableBands.push({ x1: points[flyStart].x, x2: points[i - 1].x });
+          flyStart = -1;
+        }
+      }
+    });
+    if (flyStart !== -1) {
+      flyableBands.push({ x1: points[flyStart].x, x2: points[points.length - 1].x });
+    }
+
+    return {
+      width, height, padTop, padBottom, padLeft, padRight,
+      points, realPath, forecastPath, areaPath,
+      labelIndices, yLabels, data, maxSpeed, minSpeed,
+      chartHeight, chartWidth, separators,
+      realPoints, forecastPoints,
+      nightBands, flyableBands,
     };
-  }, [allHourlyData]);
+  }, [allHourlyData, isMobile]);
+
+  // Auto-scroll ke titik "sekarang"
+  useEffect(() => {
+    if (!chart || !chartScrollRef.current) return;
+    let nowIndex = -1;
+    for (let i = allHourlyData.length - 1; i >= 0; i--) {
+      if (!allHourlyData[i].isForecast) { nowIndex = i; break; }
+    }
+    if (nowIndex === -1) nowIndex = 0;
+    const nowPoint = chart.points[nowIndex];
+    if (!nowPoint) return;
+    const container = chartScrollRef.current;
+    const targetScroll = Math.max(0, nowPoint.x - container.clientWidth / 2);
+    container.scrollTo({ left: targetScroll, behavior: 'auto' });
+  }, [chart, allHourlyData]);
 
   const suitability = weatherData ? suitabilityMeta[weatherData.current.kiteSuitability] : null;
   const todayLabel = new Date().toLocaleDateString('id-ID', { weekday: 'long' });
@@ -414,25 +630,23 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
     longitude: roundNumber(weatherData.location.longitude, 2)
   } : null;
 
-  const windDirectionText = weatherData?.current?.windDirection !== undefined 
-    ? getWindDirectionText(weatherData.current.windDirection) 
+  const windDirectionText = weatherData?.current?.windDirection !== undefined
+    ? getWindDirectionText(weatherData.current.windDirection)
     : 'Tidak diketahui';
 
   const windDirectionShort = weatherData?.current?.windDirection !== undefined
     ? getWindDirectionShort(weatherData.current.windDirection)
     : '?';
 
-  const roundedWindSpeed = weatherData?.current?.windSpeed !== undefined 
-    ? roundNumber(weatherData.current.windSpeed, 1) 
+  const roundedWindSpeed = weatherData?.current?.windSpeed !== undefined
+    ? roundNumber(weatherData.current.windSpeed, 1)
     : 0;
-  const roundedWindGust = weatherData?.current?.windGust !== undefined 
-    ? roundNumber(weatherData.current.windGust, 1) 
+  const roundedWindGust = weatherData?.current?.windGust !== undefined
+    ? roundNumber(weatherData.current.windGust, 1)
     : 0;
 
-  // Ambil data forecast untuk daily
   const forecastData = weatherData?.forecast || [];
-  
-  // Buat daily forecast dari data forecast
+
   const dailyForecast = useMemo(() => {
     const dailyMap = new Map();
     forecastData.forEach(f => {
@@ -465,9 +679,9 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
   return (
     <div className={`flex-1 flex flex-col items-center w-full bg-white dark:bg-black text-zinc-900 dark:text-white min-h-screen px-3 sm:px-4 py-4 md:py-8 font-sans transition-colors ${className}`}>
-      
-      {/* Header Section */}
-      <motion.div 
+
+      {/* Header */}
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -491,7 +705,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
             </div>
           </div>
 
-          {/* Search Dropdown */}
           <div className="relative w-full sm:w-64 shrink-0">
             <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all duration-200">
               {loadingLocations ? (
@@ -508,8 +721,8 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                 className="bg-transparent outline-none w-full min-w-0 text-sm text-zinc-700 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
               />
               {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')} 
+                <button
+                  onClick={() => setSearchQuery('')}
                   className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors shrink-0"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -557,9 +770,8 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
         </div>
       </motion.div>
 
-      {/* Notifikasi */}
       {locations.length === 0 && !loadingLocations && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="max-w-5xl w-full mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg flex items-start gap-2"
@@ -572,8 +784,7 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
         </motion.div>
       )}
 
-      {/* Main Weather Widget Box */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
@@ -625,7 +836,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                 </div>
               </div>
 
-              {/* Weather Stats */}
               <div className="grid grid-cols-3 gap-1.5 sm:gap-2 w-full lg:w-auto">
                 <div className="bg-zinc-50 dark:bg-zinc-900 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-center min-w-0 sm:min-w-[70px] border border-zinc-200 dark:border-zinc-800">
                   <Droplets className="w-4 h-4 text-blue-500 mx-auto mb-1" />
@@ -651,7 +861,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
               </div>
             </div>
 
-            {/* Suitability Badge */}
             {suitability && (
               <div className="mt-4 flex items-center gap-3 flex-wrap">
                 <span className={`inline-flex items-center gap-2 border rounded-full px-3 py-1 text-xs font-medium ${suitability.className}`}>
@@ -665,7 +874,55 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
               </div>
             )}
 
-            {/* Wind Chart Section - Lebih besar & bisa di-scroll */}
+            {/* ================= DESKRIPSI PREDIKSI LAYANGAN ================= */}
+            {flyableAnalysis.bestRange ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl flex items-start gap-2.5"
+              >
+                <div className="p-1.5 bg-blue-500/10 rounded-lg shrink-0 mt-0.5">
+                  <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">
+                    Prediksi Waktu Layak Terbang
+                  </p>
+                  <p className="text-xs text-blue-800 dark:text-blue-300 mt-0.5 leading-relaxed">
+                    Layangan diperkirakan bertahan dari jam{' '}
+                    <b className="text-blue-900 dark:text-blue-100">{flyableAnalysis.bestRange.startLabel}</b>{' '}
+                    sampai jam{' '}
+                    <b className="text-blue-900 dark:text-blue-100">{flyableAnalysis.bestRange.endLabel}</b>{' '}
+                    ({flyableAnalysis.bestRange.durationHours} jam layak terbang).
+                  </p>
+                  {flyableAnalysis.ranges.length > 1 && (
+                    <p className="text-[10px] text-blue-700 dark:text-blue-400 mt-1">
+                      Ada {flyableAnalysis.ranges.length} rentang layak terbang hari ini.
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 p-3 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-start gap-2.5"
+              >
+                <div className="p-1.5 bg-zinc-400/10 rounded-lg shrink-0 mt-0.5">
+                  <Clock className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Prediksi Waktu Layak Terbang
+                  </p>
+                  <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
+                    Tidak ada jam yang layak untuk menerbangkan layangan dalam 2 hari ke depan.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Wind Chart Section */}
             <div className="mt-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="p-1.5 bg-blue-600/10 rounded-lg shrink-0">
@@ -677,12 +934,12 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
 
               {chart && allHourlyData.length > 0 ? (
                 <div className="w-full bg-zinc-50 dark:bg-zinc-900/60 rounded-xl p-2 sm:p-3 border border-zinc-200 dark:border-zinc-800">
-                  {/* Wrapper scrollable secara horizontal, grafik dirender pada lebar tetap sesuai jumlah titik data */}
-                  <div className="w-full overflow-x-auto">
+                  <div className="w-full overflow-x-auto" ref={chartScrollRef}>
                     <svg
                       viewBox={`0 0 ${chart.width} ${chart.height}`}
-                      style={{ width: chart.width, height: 260, minWidth: chart.width }}
-                      className="sm:!h-[300px]"
+                      width={chart.width}
+                      height={chart.height}
+                      style={{ minWidth: chart.width, display: 'block' }}
                       preserveAspectRatio="xMidYMid meet"
                     >
                       <defs>
@@ -695,8 +952,32 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                           <stop offset="100%" stopColor="rgba(147,197,253,0.02)" />
                         </linearGradient>
                       </defs>
-                      
-                      {/* Y-axis grid lines */}
+
+                      {/* Shading zona layak terbang */}
+                      {chart.flyableBands.map((band, i) => (
+                        <rect
+                          key={`fly-${i}`}
+                          x={band.x1}
+                          y={chart.padTop}
+                          width={Math.max(0, band.x2 - band.x1)}
+                          height={chart.chartHeight}
+                          fill={chartColors.flyableBg}
+                        />
+                      ))}
+
+                      {/* Shading malam */}
+                      {chart.nightBands.map((band, i) => (
+                        <rect
+                          key={`night-${i}`}
+                          x={band.x1}
+                          y={chart.padTop}
+                          width={Math.max(0, band.x2 - band.x1)}
+                          height={chart.chartHeight}
+                          fill={chartColors.nightBg}
+                        />
+                      ))}
+
+                      {/* Y-axis grid */}
                       {chart.yLabels.map((label, i) => (
                         <g key={i}>
                           <line
@@ -709,120 +990,147 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                             strokeDasharray="5 5"
                           />
                           <text
-                            x={chart.padLeft - 10}
+                            x={chart.padLeft - 8}
                             y={label.y + 4}
                             textAnchor="end"
-                            className="text-[12px] fill-zinc-400 dark:fill-zinc-500 font-medium"
+                            className="text-[11px] sm:text-[12px] fill-zinc-400 dark:fill-zinc-500 font-medium"
                           >
                             {label.value}
                           </text>
                         </g>
                       ))}
 
-                      {/* Separator line (hari ini vs besok) */}
-                      {chart.separatorIndex > 0 && chart.separatorIndex < chart.points.length && (
-                        <line
-                          x1={chart.points[chart.separatorIndex].x}
-                          y1={chart.padTop}
-                          x2={chart.points[chart.separatorIndex].x}
-                          y2={chart.height - chart.padBottom}
-                          stroke={chartColors.separator}
-                          strokeWidth={2}
-                          strokeDasharray="8 6"
-                        />
-                      )}
+                      {/* ====== SEPARATOR HARI ====== */}
+                      {chart.separators.map((sep, i) => {
+                        if (sep.isFirst) {
+                          // "Hari ini" - label di kiri atas, tanpa garis vertikal
+                          return (
+                            <g key={`sep-${i}`}>
+                              <text
+                                x={sep.x + 4}
+                                y={chart.padTop - 26}
+                                textAnchor="start"
+                                className="text-[10px] sm:text-[11px] fill-blue-600 dark:fill-blue-400 font-bold"
+                              >
+                                {sep.label}
+                              </text>
+                              <text
+                                x={sep.x + 4}
+                                y={chart.padTop - 14}
+                                textAnchor="start"
+                                className="text-[9px] fill-zinc-400 dark:fill-zinc-500 font-medium"
+                              >
+                                {sep.sublabel}
+                              </text>
+                            </g>
+                          );
+                        }
+                        // "Besok" - garis putus-putus vertikal + label di atas
+                        return (
+                          <g key={`sep-${i}`}>
+                            <line
+                              x1={sep.x}
+                              y1={chart.padTop - 6}
+                              x2={sep.x}
+                              y2={chart.height - chart.padBottom}
+                              stroke={chartColors.separator}
+                              strokeWidth={2}
+                              strokeDasharray="6 5"
+                            />
+                            <text
+                              x={sep.x}
+                              y={chart.padTop - 26}
+                              textAnchor="middle"
+                              className="text-[10px] sm:text-[11px] fill-blue-600 dark:fill-blue-400 font-bold"
+                            >
+                              {sep.label}
+                            </text>
+                            <text
+                              x={sep.x}
+                              y={chart.padTop - 14}
+                              textAnchor="middle"
+                              className="text-[9px] fill-zinc-400 dark:fill-zinc-500 font-medium"
+                            >
+                              {sep.sublabel}
+                            </text>
+                          </g>
+                        );
+                      })}
 
-                      {/* Area fill - real data */}
+                      {/* Area fill - real */}
                       {chart.areaPath && (
-                        <path 
-                          d={chart.areaPath} 
-                          fill="url(#windFill)" 
-                          stroke="none" 
-                          opacity="0.6"
-                        />
+                        <path d={chart.areaPath} fill="url(#windFill)" stroke="none" opacity="0.6" />
                       )}
 
                       {/* Area fill - forecast */}
                       {chart.forecastPath && chart.forecastPoints.length > 0 && (
-                        <path 
+                        <path
                           d={`${chart.forecastPath} L ${chart.forecastPoints[chart.forecastPoints.length - 1].x} ${chart.height - chart.padBottom} L ${chart.forecastPoints[0].x} ${chart.height - chart.padBottom} Z`}
-                          fill="url(#forecastFill)" 
-                          stroke="none" 
+                          fill="url(#forecastFill)"
+                          stroke="none"
                           opacity="0.4"
                         />
                       )}
-                      
-                      {/* Line - real data */}
+
+                      {/* Line - real */}
                       {chart.realPath && (
-                        <path 
-                          d={chart.realPath} 
-                          fill="none" 
-                          stroke={chartColors.line} 
-                          strokeWidth={3.5} 
-                          strokeLinecap="round" 
+                        <path
+                          d={chart.realPath}
+                          fill="none"
+                          stroke={chartColors.line}
+                          strokeWidth={3.5}
+                          strokeLinecap="round"
                           strokeLinejoin="round"
                         />
                       )}
-                      
-                      {/* Line - forecast (putus-putus) */}
+
+                      {/* Line - forecast */}
                       {chart.forecastPath && chart.forecastPoints.length > 1 && (
-                        <path 
-                          d={chart.forecastPath} 
-                          fill="none" 
-                          stroke={chartColors.lineForecast} 
-                          strokeWidth={3.5} 
-                          strokeLinecap="round" 
+                        <path
+                          d={chart.forecastPath}
+                          fill="none"
+                          stroke={chartColors.lineForecast}
+                          strokeWidth={3.5}
+                          strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeDasharray="8 5"
                         />
                       )}
-                      
-                      {/* Points - real data */}
+
+                      {/* Points - real */}
                       {chart.points.map((p, i) => {
                         const isForecast = allHourlyData[i]?.isForecast || false;
                         const isLast = i === chart.points.length - 1;
                         if (isForecast) return null;
                         return (
-                          <circle 
-                            key={`real-${i}`} 
-                            cx={p.x} 
-                            cy={p.y} 
-                            r={isLast ? 6 : 5} 
-                            fill={isLast ? chartColors.dotNow : chartColors.dot} 
-                            stroke="white" 
-                            strokeWidth="2"
-                          />
-                        );
-                      })}
-                      
-                      {/* Points - forecast */}
-                      {chart.points.map((p, i) => {
-                        const isForecast = allHourlyData[i]?.isForecast || false;
-                        if (!isForecast) return null;
-                        return (
-                          <circle 
-                            key={`forecast-${i}`} 
-                            cx={p.x} 
-                            cy={p.y} 
-                            r={5} 
-                            fill={chartColors.dotForecast} 
-                            stroke="white" 
+                          <circle
+                            key={`real-${i}`}
+                            cx={p.x}
+                            cy={p.y}
+                            r={isLast ? 6 : 5}
+                            fill={isLast ? chartColors.dotNow : chartColors.dot}
+                            stroke="white"
                             strokeWidth="2"
                           />
                         );
                       })}
 
-                      {/* Separator label */}
-                      {chart.separatorIndex > 0 && chart.separatorIndex < chart.points.length && (
-                        <text
-                          x={chart.points[chart.separatorIndex].x}
-                          y={chart.padTop - 10}
-                          textAnchor="middle"
-                          className="text-[10px] fill-zinc-400 dark:fill-zinc-500 font-medium"
-                        >
-                          │ Besok
-                        </text>
-                      )}
+                      {/* Points - forecast */}
+                      {chart.points.map((p, i) => {
+                        const isForecast = allHourlyData[i]?.isForecast || false;
+                        if (!isForecast) return null;
+                        return (
+                          <circle
+                            key={`forecast-${i}`}
+                            cx={p.x}
+                            cy={p.y}
+                            r={5}
+                            fill={chartColors.dotForecast}
+                            stroke="white"
+                            strokeWidth="2"
+                          />
+                        );
+                      })}
 
                       {/* X-axis labels */}
                       {chart.labelIndices.map((idx) => {
@@ -831,16 +1139,15 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                         const x = chart.points[idx]?.x || 0;
                         const isNow = idx === allHourlyData.length - 1;
                         const isForecast = point.isForecast;
-                        
                         return (
                           <g key={idx}>
                             <text
                               x={x}
                               y={chart.height - 14}
                               textAnchor="middle"
-                              className={`text-[11px] ${
-                                isNow ? 'fill-blue-700 dark:fill-blue-400 font-bold' : 
-                                isForecast ? 'fill-blue-400 dark:fill-blue-300' : 
+                              className={`text-[10px] sm:text-[11px] ${
+                                isNow ? 'fill-blue-700 dark:fill-blue-400 font-bold' :
+                                isForecast ? 'fill-blue-400 dark:fill-blue-300' :
                                 'fill-zinc-500 dark:fill-zinc-400'
                               }`}
                             >
@@ -848,9 +1155,9 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                             </text>
                             {isForecast && (
                               <text
-                                x={x}
-                                y={chart.height + 2}
-                                textAnchor="middle"
+                                x={x + 14}
+                                y={chart.height - 14}
+                                textAnchor="start"
                                 className="text-[9px] fill-blue-400 dark:fill-blue-300 font-medium"
                               >
                                 *
@@ -860,12 +1167,7 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                         );
                       })}
 
-                      {/* Y-axis label */}
-                      <text
-                        x={12}
-                        y={20}
-                        className="text-[10px] fill-zinc-400 dark:fill-zinc-500 font-medium"
-                      >
+                      <text x={10} y={18} className="text-[10px] fill-zinc-400 dark:fill-zinc-500 font-medium">
                         km/h
                       </text>
                     </svg>
@@ -882,8 +1184,16 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                       Prediksi
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="w-4 h-0.5 bg-zinc-400 rounded border border-dashed border-zinc-400"></span>
+                      <span className="w-4 h-0.5 border-t-2 border-dashed border-blue-500/70"></span>
                       Batas Hari
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-4 h-3 bg-blue-500/10 rounded-sm"></span>
+                      Zona Layak
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-4 h-3 bg-zinc-400/20 rounded-sm"></span>
+                      Malam
                     </span>
                   </div>
 
@@ -913,11 +1223,11 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
                 {(dailyForecast.length > 0 ? dailyForecast : weatherData.daily).map((day, idx) => {
                   const isToday = day.isToday || (idx === 0 && !dailyForecast.length);
                   return (
-                    <div 
+                    <div
                       key={idx}
                       className={`flex flex-col items-center gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl min-w-[48px] sm:min-w-[52px] shrink-0 transition-all duration-200 ${
-                        isToday 
-                          ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900' 
+                        isToday
+                          ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900'
                           : 'hover:bg-zinc-50 dark:hover:bg-zinc-900 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800'
                       }`}
                     >
@@ -943,7 +1253,6 @@ export default function WeatherWidget({ className = '' }: WeatherWidgetProps) {
               </div>
             </div>
 
-            {/* Updated At */}
             <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row gap-1 sm:gap-0 justify-between items-start sm:items-center">
               <p className="text-[9px] text-zinc-400 dark:text-zinc-500 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>

@@ -1,6 +1,7 @@
 // app/(landing)/page.tsx
 import WeatherWidget from '@/components/landing/WeatherWidget';
 import FeaturesKite from '@/components/landing/FeaturesKite';
+import MapWeather from '@/components/landing/Mapweather';
 
 export default function LandingPage() {
   return (
@@ -20,7 +21,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Kite Section */}
+      {/* Map Weather Section */}
+      <section className="py-8 md:py-12 bg-white dark:bg-black">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white">
+              Peta Angin & Cuaca <span className="text-blue-500">Interaktif</span>
+            </h2>
+            <p className="text-zinc-600 dark:text-zinc-400 mt-2">
+              Klik di mana saja pada peta untuk melihat detail cuaca dan kelayakan layangan
+            </p>
+          </div>
+          <MapWeather className="max-w-6xl mx-auto" />
+        </div>
+      </section>
+
       <FeaturesKite limit={6} />
     </div>
   );

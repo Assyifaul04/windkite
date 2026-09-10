@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { addHours, setMinutes, setSeconds } from 'date-fns';
+import { calculateNextRun } from '@/lib/cron-utils';
 
 export async function GET() {
   try {
@@ -34,30 +34,34 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    
-    // Validasi
+
     if (!body.name || !body.schedule || !body.command) {
       return NextResponse.json(
         { error: 'Name, schedule, and command are required' },
         { status: 400 }
       );
     }
-    
-    // Generate ID unik
+
+    // Validasi format schedule (5 field)
+    if (body.schedule.trim().split(/\s+/).length !== 5) {
+      return NextResponse.json(
+        { error: 'Schedule must be in cron format (5 fields): "minute hour day month dayOfWeek"' },
+        { status: 400 }
+      );
+    }
+
     const id = `cron_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
-    // Hitung next run
     const nextRun = calculateNextRun(body.schedule);
-    
+
     const job = await prisma.cronJob.create({
       data: {
-        id: id,
+        id,
         name: body.name,
         description: body.description || '',
         schedule: body.schedule,
         command: body.command,
         status: body.status || 'active',
-        nextRun: nextRun,
+        nextRun,
         runs: 0,
         successfulRuns: 0,
         failedRuns: 0,
@@ -74,48 +78,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function calculateNextRun(schedule: string): Date {
-  const now = new Date();
-  const parts = schedule.trim().split(' ');
-  
-  if (parts.length !== 5) {
-    return addHours(now, 6);
-  }
-
-  const [minute, hour, day, month, dayOfWeek] = parts;
-  let nextRun = new Date(now);
-  nextRun = setSeconds(nextRun, 0);
-  nextRun = setMinutes(nextRun, 0);
-  
-  // Setiap 6 jam: "0 */6 * * *"
-  if (minute === '0' && hour === '*/6' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = addHours(now, 6);
-    nextRun = setMinutes(nextRun, 0);
-    nextRun = setSeconds(nextRun, 0);
-    return nextRun;
-  }
-  
-  // Setiap hari jam 00:00: "0 0 * * *"
-  if (minute === '0' && hour === '0' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = new Date(now);
-    nextRun.setDate(now.getDate() + 1);
-    nextRun.setHours(0, 0, 0, 0);
-    return nextRun;
-  }
-  
-  // Setiap jam: "0 * * * *"
-  if (minute === '0' && hour === '*' && day === '*' && month === '*' && dayOfWeek === '*') {
-    nextRun = addHours(now, 1);
-    nextRun = setMinutes(nextRun, 0);
-    nextRun = setSeconds(nextRun, 0);
-    return nextRun;
-  }
-  
-  // Default: 6 jam dari sekarang
-  nextRun = addHours(now, 6);
-  nextRun = setMinutes(nextRun, 0);
-  nextRun = setSeconds(nextRun, 0);
-  return nextRun;
 }
