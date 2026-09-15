@@ -22,7 +22,7 @@ export default function LandingPage() {
       </section>
 
       {/* Map Weather Section */}
-      <section className="py-8 md:py-12 bg-white dark:bg-black">
+      {/* <section className="py-8 md:py-12 bg-white dark:bg-black">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white">
@@ -34,7 +34,7 @@ export default function LandingPage() {
           </div>
           <MapWeather className="max-w-6xl mx-auto" />
         </div>
-      </section>
+      </section> */}
 
       <FeaturesKite limit={6} />
     </div>
