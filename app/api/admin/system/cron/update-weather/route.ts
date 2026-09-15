@@ -1,4 +1,4 @@
-// app/api/cron/update-weather/route.ts
+// app/api/admin/system/cron/update-weather/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateNextRun } from '@/lib/cron-utils';
