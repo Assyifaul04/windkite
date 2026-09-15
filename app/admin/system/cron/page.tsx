@@ -63,8 +63,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -334,7 +334,7 @@ export default function CronJobsPage() {
     ? Math.round((jobs.reduce((acc, j) => acc + j.successfulRuns, 0) / totalRuns) * 100)
     : 0;
 
-  // Format data untuk grafik Recharts
+  // Format data untuk grafik Area
   const chartData = jobs.map((job) => ({
     name: job.name.length > 12 ? `${job.name.substring(0, 12)}...` : job.name,
     Sukses: job.successfulRuns,
@@ -422,7 +422,7 @@ export default function CronJobsPage() {
         </Card>
       </div>
 
-      {/* CHART: Statistik Eksekusi Cron Job */}
+      {/* CHART: Statistik Eksekusi Cron Job (Area Chart) */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -445,21 +445,57 @@ export default function CronJobsPage() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="name" fontSize={11} tickLine={false} />
-                  <YAxis fontSize={11} tickLine={false} axisLine={false} />
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSukses" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="colorGagal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    fontSize={11} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{ fill: 'currentColor', opacity: 0.6 }}
+                  />
+                  <YAxis 
+                    fontSize={11} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{ fill: 'currentColor', opacity: 0.6 }}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'rgba(255, 255, 255, 0.95)',
                       borderRadius: '8px',
                       fontSize: '12px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      border: 'none',
                     }}
                   />
-                  <Bar dataKey="Sukses" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="Gagal" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <Area 
+                    type="monotone" 
+                    dataKey="Sukses" 
+                    stroke="#10b981" 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill="url(#colorSukses)" 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="Gagal" 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill="url(#colorGagal)" 
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
