@@ -1,7 +1,6 @@
-// app/admin/system/cron/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Clock,
   CheckCircle,
@@ -16,13 +15,14 @@ import {
   Activity,
   MoreVertical,
   Loader2,
-  AlertCircle,
+  TrendingUp,
 } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
   Table,
@@ -62,6 +62,15 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from 'recharts';
 
 interface CronJob {
   id: string;
@@ -98,6 +107,7 @@ const SCHEDULE_OPTIONS = [
 export default function CronJobsPage() {
   const [jobs, setJobs] = useState<CronJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshedAuto, setIsRefreshedAuto] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRunningJob, setIsRunningJob] = useState<string | null>(null);
@@ -111,32 +121,38 @@ export default function CronJobsPage() {
     status: 'active',
   });
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
-
-  const fetchJobs = async () => {
+  // Fetch Jobs dengan penanganan silent loading saat auto-refresh
+  const fetchJobs = useCallback(async (isSilent = false) => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/admin/system/cron');
+      if (!isSilent) setLoading(true);
+      setIsRefreshedAuto(true);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch cron jobs');
-      }
+      const response = await fetch('/api/admin/system/cron');
+      if (!response.ok) throw new Error('Failed to fetch cron jobs');
       
       const data = await response.json();
       setJobs(data);
     } catch (error) {
       console.error('Error fetching cron jobs:', error);
-      toast.error('Gagal memuat data cron jobs');
+      if (!isSilent) toast.error('Gagal memuat data cron jobs');
     } finally {
       setLoading(false);
+      setTimeout(() => setIsRefreshedAuto(false), 1000);
     }
-  };
+  }, []);
+
+  // Auto-Polling setiap 10 detik
+  useEffect(() => {
+    fetchJobs();
+    const interval = setInterval(() => {
+      fetchJobs(true);
+    }, 10000); // 10000ms = 10 detik
+
+    return () => clearInterval(interval);
+  }, [fetchJobs]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       const url = dialogMode === 'create' 
         ? '/api/admin/system/cron' 
@@ -167,7 +183,6 @@ export default function CronJobsPage() {
 
   const handleDelete = async () => {
     if (!selectedJob) return;
-    
     try {
       const response = await fetch(`/api/admin/system/cron/${selectedJob.id}`, {
         method: 'DELETE',
@@ -212,7 +227,6 @@ export default function CronJobsPage() {
 
   const handleRunNow = async (job: CronJob) => {
     if (isRunningJob) return;
-    
     try {
       setIsRunningJob(job.id);
       const response = await fetch(`/api/admin/system/cron/${job.id}/run`, {
@@ -286,9 +300,6 @@ export default function CronJobsPage() {
     return found ? found.label : command;
   };
 
-  // ============================================
-  // PERBAIKAN: Handler untuk Select dengan type string | null
-  // ============================================
   const handleScheduleChange = (value: string | null) => {
     setFormData({ ...formData, schedule: value || '0 */6 * * *' });
   };
@@ -312,7 +323,7 @@ export default function CronJobsPage() {
             <div key={i} className="h-24 bg-slate-200 dark:bg-slate-800 animate-pulse rounded-lg" />
           ))}
         </div>
-        <div className="h-[400px] bg-slate-200 dark:bg-slate-800 animate-pulse rounded-lg" />
+        <div className="h-[300px] bg-slate-200 dark:bg-slate-800 animate-pulse rounded-lg" />
       </div>
     );
   }
@@ -323,19 +334,34 @@ export default function CronJobsPage() {
     ? Math.round((jobs.reduce((acc, j) => acc + j.successfulRuns, 0) / totalRuns) * 100)
     : 0;
 
+  // Format data untuk grafik Recharts
+  const chartData = jobs.map((job) => ({
+    name: job.name.length > 12 ? `${job.name.substring(0, 12)}...` : job.name,
+    Sukses: job.successfulRuns,
+    Gagal: job.failedRuns,
+  }));
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Cron Jobs</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">Cron Jobs</h1>
+            {isRefreshedAuto && (
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
-            Kelola tugas terjadwal dan update data otomatis
+            Kelola tugas terjadwal dan pemantauan realtime
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchJobs}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={() => fetchJobs(false)}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshedAuto ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button size="sm" onClick={openCreateDialog}>
@@ -395,6 +421,50 @@ export default function CronJobsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* CHART: Statistik Eksekusi Cron Job */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-sky-500" />
+                Statistik Eksekusi Cron Job
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Perbandingan jumlah eksekusi berhasil vs gagal per tugas (Live Update)
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="h-[230px] w-full pt-4">
+            {jobs.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                Belum ada data eksekusi
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="name" fontSize={11} tickLine={false} />
+                  <YAxis fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    }}
+                  />
+                  <Bar dataKey="Sukses" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Gagal" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Jobs Table */}
       <div className="border rounded-lg overflow-hidden">
@@ -574,9 +644,6 @@ export default function CronJobsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Pilih jenis tugas yang akan dijalankan
-                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="schedule">Schedule *</Label>
@@ -595,9 +662,6 @@ export default function CronJobsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Format: minute hour day month dayOfWeek
-                </p>
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -633,7 +697,7 @@ export default function CronJobsPage() {
           <DialogHeader>
             <DialogTitle className="text-red-600">Hapus Cron Job</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus cron job ini? Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin menghapus cron job ini?
             </DialogDescription>
           </DialogHeader>
           {selectedJob && (
@@ -645,9 +709,6 @@ export default function CronJobsPage() {
                     <p className="font-medium truncate">{selectedJob.name}</p>
                     <p className="text-sm text-muted-foreground truncate">
                       {selectedJob.description || 'Tidak ada deskripsi'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Schedule: {selectedJob.schedule}
                     </p>
                   </div>
                 </div>
