@@ -4,11 +4,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// GET - Ambil SEMUA pengaturan iklan (List)
+// GET - Ambil SEMUA pengaturan iklan
 export async function GET() {
   try {
     const settings = await prisma.adSettings.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(settings);
   } catch (error) {
@@ -30,18 +30,22 @@ export async function POST(req: NextRequest) {
     const settings = await prisma.adSettings.create({
       data: {
         provider: body.provider || 'google_adsense',
-        scriptUrl: body.scriptUrl || '',
-        clientId: body.clientId || '',
-        adSlot: body.adSlot || '',
-        isActive: body.isActive !== undefined ? body.isActive : true,
+        name: body.name || null,
         position: body.position || 'global',
+        isActive: body.isActive !== undefined ? body.isActive : true,
+        clientId: body.clientId || null,
+        adSlot: body.adSlot || null,
+        scriptUrl: body.scriptUrl || null,
+        adCode: body.adCode || null,
+        adType: body.adType || null,
+        adSize: body.adSize || null,
       },
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: settings,
-      message: 'Ad settings added successfully'
+      message: 'Ad settings added successfully',
     });
   } catch (error) {
     console.error('Error saving ad settings:', error);
@@ -49,7 +53,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH - Update status aktif/nonaktif atau update data
+// PATCH - Update
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -64,10 +68,10 @@ export async function PATCH(req: NextRequest) {
       data: updateData,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: settings,
-      message: 'Ad settings updated successfully'
+      message: 'Ad settings updated successfully',
     });
   } catch (error) {
     console.error('Error updating ad settings:', error);
@@ -75,7 +79,7 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE - Hapus iklan
+// DELETE
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -85,13 +89,11 @@ export async function DELETE(req: NextRequest) {
 
     const { id } = await req.json();
 
-    await prisma.adSettings.delete({
-      where: { id },
-    });
+    await prisma.adSettings.delete({ where: { id } });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Ad settings deleted successfully'
+    return NextResponse.json({
+      success: true,
+      message: 'Ad settings deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting ad settings:', error);
